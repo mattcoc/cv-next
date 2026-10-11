@@ -103,6 +103,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 }
             }
         }
+        prefs.edit().putLong("lastCheck", System.currentTimeMillis()).apply()
         runCatching { HomeworkWidget.refresh(applicationContext) }
         return Result.success()
     }

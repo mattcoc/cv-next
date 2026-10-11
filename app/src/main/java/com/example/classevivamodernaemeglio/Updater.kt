@@ -4,38 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
@@ -134,88 +104,5 @@ object Updater {
                 .setDataAndType(uri, "application/vnd.android.package-archive")
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         )
-    }
-}
-
-private sealed interface UpdateState {
-    data object Idle : UpdateState
-    data object Checking : UpdateState
-    data object UpToDate : UpdateState
-    data class Available(val release: Release) : UpdateState
-    data class Downloading(val release: Release, val progress: Float) : UpdateState
-    data class Ready(val release: Release, val file: File) : UpdateState
-    data class Failed(val message: String) : UpdateState
-}
-
-@Composable
-fun UpdateCard(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val c = MaterialTheme.colorScheme
-    val installed = remember { Updater.installed(context) }
-    var state by remember { mutableStateOf<UpdateState>(UpdateState.Idle) }
-
-    fun check() = scope.launch {
-        state = UpdateState.Checking
-        state = try {
-            val r = Updater.latest()
-            if (Updater.isNewer(r.version, installed)) UpdateState.Available(r) else UpdateState.UpToDate
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            UpdateState.Failed((e as? ApiException)?.message ?: "Nessuna connessione. Riprova.")
-        }
-    }
-
-    fun download(r: Release) = scope.launch {
-        state = UpdateState.Downloading(r, 0f)
-        state = try {
-            val file = Updater.download(context, r) { p -> state = UpdateState.Downloading(r, p) }
-            Updater.install(context, file)
-            UpdateState.Ready(r, file)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            UpdateState.Failed((e as? ApiException)?.message ?: "Download non riuscito. Riprova.")
-        }
-    }
-
-    Card(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.SystemUpdate, null, tint = c.primary)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Versione installata: ${installed.ifBlank { "–" }}", fontWeight = FontWeight.Medium)
-                    val status = when (val s = state) {
-                        UpdateState.Idle -> "Gli aggiornamenti arrivano da GitHub"
-                        UpdateState.Checking -> "Controllo in corso…"
-                        UpdateState.UpToDate -> "Hai già l'ultima versione"
-                        is UpdateState.Available -> "Disponibile la versione ${s.release.version}" +
-                            if (s.release.size > 0) " (${s.release.size / (1024 * 1024)} MB)" else ""
-                        is UpdateState.Downloading -> "Download della versione ${s.release.version}… ${(s.progress * 100).toInt()}%"
-                        is UpdateState.Ready -> "Versione ${s.release.version} scaricata"
-                        is UpdateState.Failed -> s.message
-                    }
-                    Text(
-                        status, style = MaterialTheme.typography.bodySmall,
-                        color = if (state is UpdateState.Failed) c.error else c.onSurfaceVariant
-                    )
-                }
-            }
-            (state as? UpdateState.Available)?.release?.notes?.takeIf { it.isNotBlank() }?.let { notes ->
-                Text("Novità", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                ExpandableText(notes.replace(Regex("(?m)^#+\\s*"), "").replace("**", ""), lines = 6)
-            }
-            when (val s = state) {
-                is UpdateState.Downloading -> LinearProgressIndicator({ s.progress }, Modifier.fillMaxWidth())
-                is UpdateState.Available -> FilledTonalButton({ download(s.release) }, Modifier.fillMaxWidth()) { Text("Scarica e installa") }
-                is UpdateState.Ready -> FilledTonalButton({ Updater.install(context, s.file) }, Modifier.fillMaxWidth()) { Text("Installa") }
-                UpdateState.Checking -> FilledTonalButton({}, Modifier.fillMaxWidth(), enabled = false) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                }
-                else -> FilledTonalButton({ check() }, Modifier.fillMaxWidth()) { Text("Controlla aggiornamenti") }
-            }
-        }
     }
 }

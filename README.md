@@ -72,7 +72,7 @@ L'app controlla le novità di **tutti gli account salvati** circa una volta all'
 - se le credenziali sono collegate a più studenti, al login si sceglie quale; gli altri si aggiungono con "Aggiungi account"
 - tema **sistema, chiaro o scuro**
 - colori **Material You** presi dallo sfondo (Android 12+) oppure uno tra 9 colori: indaco, blu, turchese, verde, giallo, arancio, rosso, rosa, viola
-- impostazioni sempre a portata di mano con l'icona a forma di ingranaggio in alto, accanto al profilo
+- impostazioni sempre a portata di mano con l'icona a forma di ingranaggio in alto, accanto al profilo: aspetto, notifiche, aggiornamenti, spazio occupato dai dati (con la possibilità di svuotarli) e informazioni sull'app, con il link per segnalare un problema
 
 ### Widget
 Widget per la schermata home con i prossimi compiti dell'account attivo. Si aggiorna insieme al controllo delle notifiche e, toccandolo, apre l'agenda.

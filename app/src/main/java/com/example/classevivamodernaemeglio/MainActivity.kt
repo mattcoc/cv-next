@@ -2,6 +2,7 @@ package com.example.classevivamodernaemeglio
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -126,7 +127,15 @@ class MainActivity : ComponentActivity() {
         Notifier.schedule(this, settings.alerts)
         target.value = intent?.getStringExtra("section")
         targetAccount.value = intent?.getStringExtra("account")
-        setContent { AppTheme(settings) { Surface(Modifier.fillMaxSize()) { App(api, settings, target, targetAccount) } } }
+        // Solo nella versione di sviluppo: apre direttamente una schermata, per gli screenshot automatici.
+        val debugScreen = if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) intent?.getStringExtra("debugScreen") else null
+        setContent {
+            AppTheme(settings) {
+                Surface(Modifier.fillMaxSize()) {
+                    if (debugScreen == "settings") SettingsScreen(settings) { finish() } else App(api, settings, target, targetAccount)
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -339,7 +348,6 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     var section by rememberSaveable { mutableStateOf(Section.Oggi) }
     var agendaFilter by rememberSaveable { mutableStateOf("Tutto") }
     var menu by remember { mutableStateOf(false) }
-    var settingsOpen by remember { mutableStateOf(false) }
     val stack = remember { mutableStateListOf<Page>() }
     var depth by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
@@ -358,7 +366,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     LaunchedEffect(Unit) { listOf(lessons, grades, agenda, absences, notices, periods, school, payments).forEach { launch { it.refresh() } } }
     val context = LocalContext.current
     var update by remember { mutableStateOf<Release?>(null) }
-    LaunchedEffect(Unit) { update = Updater.dailyCheck(context) }
+    LaunchedEffect(Unit) { if (settings.autoUpdate) update = Updater.dailyCheck(context) }
     LaunchedEffect(target.value) {
         target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
         target.value = null
@@ -376,7 +384,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                         ) { Text(it, fontWeight = FontWeight.SemiBold) }
                     },
                     actions = {
-                        IconButton({ settingsOpen = true }) { Icon(Icons.Rounded.SettingsIcon, "Impostazioni") }
+                        IconButton({ stack.add(Page.Preferences) }) { Icon(Icons.Rounded.SettingsIcon, "Impostazioni") }
                         IconButton({ menu = true }) { Avatar(api.name) }
                     }
                 )
@@ -397,7 +405,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             TodayScreen(
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
                                 { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
-                                update, { settingsOpen = true }, { update = null }
+                                update, { stack.add(Page.Preferences) }, { update = null }
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
@@ -433,6 +441,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                     Page.Didactics -> SubScreen("File dei docenti", back) { Lazy(didactics) { DidacticsScreen(api, didactics.data!!) { stack.add(it) } } }
                     Page.Documents -> SubScreen("Scrutini", back) { Lazy(documents) { DocumentsScreen(api, documents.data!!) { stack.add(it) } } }
                     Page.Lessons -> SubScreen("Lezioni", back) { Refreshable(lessons) { LessonsScreen(lessons.data!!) } }
+                    Page.Preferences -> SettingsScreen(settings, back)
                 }
             }
         }
@@ -441,7 +450,6 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
         api, school.data, { menu = false }, { menu = false; onSwitch(it) }, { menu = false; onAdd() },
         { menu = false; onLogout() }
     )
-    if (settingsOpen) SettingsSheet(settings) { settingsOpen = false }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -103,6 +103,7 @@ sealed interface Page {
     data object Didactics : Page
     data object Documents : Page
     data object Lessons : Page
+    data object Preferences : Page
 }
 
 const val WEB = Endpoints.WEB

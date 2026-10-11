@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       screen:
-        description: 'Schermata da fotografare (settings)'
+        description: 'Schermata da fotografare (settings, grades)'
         default: 'settings'
+      extras:
+        description: 'Opzioni in più, es. --es debugSeed Rosso --ei debugMode 2'
+        default: ''
 
 jobs:
   screenshot:
@@ -42,7 +45,7 @@ jobs:
           disable-animations: true
           script: |
             adb install -r app.apk
-            adb shell am start -n io.github.mattcoc.cvnext/com.example.classevivamodernaemeglio.MainActivity --es debugScreen ${{ github.event.inputs.screen || 'settings' }}
+            adb shell am start -n io.github.mattcoc.cvnext/com.example.classevivamodernaemeglio.MainActivity --es debugScreen ${{ github.event.inputs.screen || 'settings' }} ${{ github.event.inputs.extras }}
             sleep 12
             adb exec-out screencap -p > shot1.png
             adb shell input swipe 540 1900 540 500 400

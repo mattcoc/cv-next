@@ -128,11 +128,18 @@ class MainActivity : ComponentActivity() {
         target.value = intent?.getStringExtra("section")
         targetAccount.value = intent?.getStringExtra("account")
         // Solo nella versione di sviluppo: apre direttamente una schermata, per gli screenshot automatici.
-        val debugScreen = if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) intent?.getStringExtra("debugScreen") else null
+        val debuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val debugScreen = if (debuggable) intent?.getStringExtra("debugScreen") else null
+        if (debuggable) intent?.getIntExtra("debugMode", -1)?.takeIf { it >= 0 }?.let { settings.update(mode = it) }
+        if (debuggable) intent?.getStringExtra("debugSeed")?.let { name -> seeds.firstOrNull { it.second == name }?.let { settings.update(seed = it.first) } }
         setContent {
             AppTheme(settings) {
                 Surface(Modifier.fillMaxSize()) {
-                    if (debugScreen == "settings") SettingsScreen(settings) { finish() } else App(api, settings, target, targetAccount)
+                    when (debugScreen) {
+                        "settings" -> SettingsScreen(settings) { finish() }
+                        "grades" -> GradesScreen(DebugData.grades, DebugData.periods)
+                        else -> App(api, settings, target, targetAccount)
+                    }
                 }
             }
         }

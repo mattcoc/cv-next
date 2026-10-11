@@ -76,7 +76,8 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
             }
         }
         item {
-            Card(Modifier.appear(1), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            val (cardBg, cardFg) = averageCardColors(avg)
+            Card(Modifier.appear(1), colors = CardDefaults.cardColors(containerColor = cardBg, contentColor = cardFg)) {
                 Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(if (period == YEAR) "Media dell'anno" else "Media · ${name(period)}", style = MaterialTheme.typography.titleMedium)

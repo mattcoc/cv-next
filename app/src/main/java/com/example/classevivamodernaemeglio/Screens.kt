@@ -201,6 +201,18 @@ fun gradeColors(value: Double?, counts: Boolean = true): Pair<Color, Color> {
     }
 }
 
+/** Colori della scheda della media: dipendono dal voto, non dal colore del tema (un tema rosso non deve sembrare un'insufficienza). */
+@Composable
+fun averageCardColors(avg: Double?): Pair<Color, Color> {
+    val dark = isSystemInDarkTheme()
+    val c = MaterialTheme.colorScheme
+    return when {
+        avg == null -> c.surfaceContainerHigh to c.onSurface
+        avg >= 6 -> if (dark) Color(0xFF1D3A21) to Color(0xFFC4EEC2) else Color(0xFFD5F2D1) to Color(0xFF0B3A12)
+        else -> c.errorContainer to c.onErrorContainer
+    }
+}
+
 @Composable
 fun GradeCircle(g: Grade, size: Dp = 44.dp) {
     val (bg, fg) = gradeColors(g.decimal, g.counts)

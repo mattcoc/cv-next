@@ -357,7 +357,7 @@ fun LessonItem(l: Lesson) {
 fun EventItem(e: Event, showDate: Boolean = false) {
     val c = MaterialTheme.colorScheme
     val who = e.subject.ifBlank { e.author }
-    val kind = if (e.homework) "Compito" else if (e.isTest) "Verifica" else null
+    val kind = if (e.isTest) "Verifica" else if (e.homework) "Compito" else null
     Item(
         who.ifBlank { kind ?: "Evento" },
         listOfNotNull(
@@ -380,6 +380,7 @@ fun TodayScreen(
     payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit,
     update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit,
     reminders: List<Reminder> = emptyList(), onAddReminder: (String, String) -> Unit = { _, _ -> }, onRemoveReminder: (Reminder) -> Unit = {},
+    myNames: List<String> = emptyList(),
     onAbsences: () -> Unit
 ) {
     var adding by remember { mutableStateOf<LocalDate?>(null) }
@@ -455,7 +456,7 @@ fun TodayScreen(
         val tests = agenda.filter { it.isTest && it.date >= today.toString() && it.date <= today.plusDays(14).toString() }
         if (tests.isNotEmpty()) {
             item { Box(Modifier.appear(2)) { Header("Verifiche in arrivo") } }
-            animItems(tests.take(3), "tests", 2) { TestItem(it, today) }
+            animItems(tests.take(3), "tests", 2) { TestItem(it, today, Mentions.matches("${it.notes} ${it.subject}", myNames)) }
         }
         item { Box(Modifier.appear(2)) { Header("La giornata") } }
         item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
@@ -499,12 +500,12 @@ fun TodayScreen(
 }
 
 @Composable
-fun TestItem(e: Event, today: LocalDate) {
+fun TestItem(e: Event, today: LocalDate, mine: Boolean = false) {
     val days = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.parse(e.date))
     val c = MaterialTheme.colorScheme
     val (bg, fg) = if (days <= 1) c.errorContainer to c.onErrorContainer else c.tertiaryContainer to c.onTertiaryContainer
     Item(
-        e.subject.ifBlank { e.author }, longDate(e.date), e.notes, expandable = true,
+        e.subject.ifBlank { e.author }, longDate(e.date) + if (mine) " · Ci sei anche tu" else "", e.notes, expandable = true, bold = mine,
         leading = { IconCircle(Icons.Rounded.Quiz, c.surfaceContainerHighest, c.onSurfaceVariant) },
         trailing = {
             Text(

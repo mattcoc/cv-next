@@ -443,7 +443,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
                                 { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
                                 update, { stack.add(Page.Preferences) }, { update = null },
-                                reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) }
+                                reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) },
+                                api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty()
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
@@ -479,7 +480,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                     Page.Didactics -> SubScreen("File dei docenti", back) { Lazy(didactics) { DidacticsScreen(api, didactics.data!!) { stack.add(it) } } }
                     Page.Documents -> SubScreen("Scrutini", back) { Lazy(documents) { DocumentsScreen(api, documents.data!!) { stack.add(it) } } }
                     Page.Lessons -> SubScreen("Lezioni", back) { Refreshable(lessons) { LessonsScreen(lessons.data!!) } }
-                    Page.Preferences -> SettingsScreen(settings, back)
+                    Page.Preferences -> SettingsScreen(settings, api, back)
                 }
             }
         }

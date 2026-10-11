@@ -28,7 +28,7 @@ La schermata iniziale riassume la giornata:
 - avviso degli **eventi da giustificare** (assenze, ritardi, uscite), con collegamento all'elenco
 - avviso dei **pagamenti da fare** su PagOnline, con importo e scadenza
 - **la giornata**: una striscia con le due settimane prima e dopo oggi; per ogni giorno si vedono insieme assenze, voti presi, compiti ed eventi e lezioni (ora, durata, docente e argomento), scorrendo con uno swipe
-- **verifiche in arrivo**: le verifiche e le interrogazioni delle prossime due settimane in cima, con il conto alla rovescia
+- **verifiche in arrivo**: le verifiche e le interrogazioni delle prossime due settimane in cima, con il conto alla rovescia e "Ci sei anche tu" quando sei nominato. Vengono riconosciute dal testo ("verifica", "compito", "interrogazione", "prova scritta"...) scartando le frasi che le nominano soltanto, come "esercizi in preparazione al compito"
 - **promemoria personali** su qualsiasi giorno ("portare il libro di disegno"), salvati solo sul telefono
 - **ultimi 10 voti** in un carosello
 - i prossimi 4 eventi in agenda
@@ -79,6 +79,8 @@ Si attivano singolarmente dalle impostazioni:
 - nuovo **materiale dei docenti**
 - nuove **note**
 - **pagamenti** da effettuare
+
+**Il tuo nome in agenda**: un avviso quando il tuo cognome (o i nomi che scegli) compare in agenda, ad esempio tra gli interrogati. Il controllo avviene sul telefono, senza IA e senza inviare dati a nessuno.
 
 **Promemoria della sera**: all'ora scelta (dalle 18 alle 21) una notifica con compiti, verifiche e promemoria del giorno di scuola successivo.
 

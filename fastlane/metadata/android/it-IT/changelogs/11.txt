@@ -2,3 +2,5 @@
 • Promemoria personali sui giorni e notifica della sera con i compiti del giorno dopo
 • Grafico dell'andamento dei voti nel dettaglio della materia
 • Se l'app si chiude per un errore, al riavvio propone una segnalazione già compilata
+• Avviso quando il tuo nome compare in agenda, ad esempio tra gli interrogati
+• Riconoscimento delle verifiche più preciso, anche quando c'è scritto "compito"

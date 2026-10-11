@@ -27,7 +27,8 @@ enum class Alert(val title: String, val description: String, val single: String,
     Homework("Agenda", "Nuovi compiti ed eventi in agenda", "Nuovo in agenda", "Agenda"),
     Didactics("Materiale dei docenti", "Nuovi file condivisi dai docenti", "Nuovo materiale", "Funzioni"),
     Notes("Note", "Note disciplinari e annotazioni", "Nuova nota", "Funzioni"),
-    Payments("PagOnline", "Pagamenti da effettuare", "Pagamento da fare", "Funzioni")
+    Payments("PagOnline", "Pagamenti da effettuare", "Pagamento da fare", "Funzioni"),
+    Mentions("Il tuo nome", "Quando sei nominato in agenda, ad esempio tra gli interrogati", "Sei nominato in agenda", "Oggi")
 }
 
 object Notifier {
@@ -94,7 +95,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             val who = if (accounts.size > 1) "${account.name.substringBefore(' ').pretty()} · " else ""
             settings.alerts.forEach { alert ->
                 runCatching {
-                    val items = fetch(api, alert)
+                    val items = fetch(api, alert, account)
                     val key = "${alert.name}-${account.key}"
                     val seen = prefs.getStringSet(key, null)
                     if (seen != null) items.filter { it.first !in seen }.take(5).forEach {
@@ -110,7 +111,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         return Result.success()
     }
 
-    private suspend fun fetch(api: Api, alert: Alert): List<Pair<String, String>> = when (alert) {
+    private suspend fun fetch(api: Api, alert: Alert, account: Account): List<Pair<String, String>> = when (alert) {
         Alert.Notices -> api.notices().filter { !it.read }.map { "${it.id}" to it.title }
         Alert.Grades -> api.grades().map { g ->
             val id = if (g.id != 0L) "${g.id}" else "${g.subject}_${g.date}_${g.value}"
@@ -122,5 +123,12 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         Alert.Didactics -> api.didactics().flatMap { t -> t.folders.flatMap { f -> f.contents.map { "${it.id}" to "${t.name}: ${it.name}" } } }
         Alert.Notes -> api.notes().map { "${it.id}" to "${it.type} · ${it.author}" }
         Alert.Payments -> api.payments().map { it.id to "${it.title} · € ${it.amount} entro il ${shortDate(it.due)}" }
+        Alert.Mentions -> {
+            val names = Mentions.names(applicationContext, account)
+            api.agenda().filter { it.date >= java.time.LocalDate.now().toString() && Mentions.matches("${it.notes} ${it.subject}", names) }.map {
+                val what = if (it.isTest) "Verifica o interrogazione" else if (it.homework) "Compito" else "Evento"
+                "m${it.id}" to "$what · ${longDate(it.date)} · ${it.subject.ifBlank { it.author }}: ${it.notes}"
+            }
+        }
     }
 }

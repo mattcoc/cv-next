@@ -16,10 +16,7 @@ data class Event(
     val date: String, val time: String, val subject: String, val author: String, val notes: String,
     val homework: Boolean, val id: Long = 0, val cls: String = ""
 )
-private val testWords = Regex("verific|interrogaz|compito in classe|\\btest\\b|\\bprova\\b|esame|simulazione", RegexOption.IGNORE_CASE)
 
-/** Un evento dell'agenda che sembra una verifica o un'interrogazione (non un compito per casa). */
-val Event.isTest get() = !homework && testWords.containsMatchIn("$notes $subject")
 
 data class Absence(val date: String, val type: String, val justified: Boolean, val reason: String)
 data class Attachment(val name: String, val num: Int)

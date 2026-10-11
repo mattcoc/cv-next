@@ -1,5 +1,8 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
@@ -167,6 +170,7 @@ private val Alert.icon: ImageVector
         Alert.Didactics -> Icons.Rounded.Folder
         Alert.Notes -> Icons.Rounded.Feedback
         Alert.Payments -> Icons.Rounded.CreditCard
+        Alert.Mentions -> Icons.Rounded.RecordVoiceOver
     }
 
 /** Spazio occupato dai dati dell'app, per la sezione "Dati e spazio". */
@@ -195,7 +199,7 @@ private sealed interface UpdateState {
 
 
 @Composable
-fun SettingsScreen(settings: Settings, onBack: () -> Unit) {
+fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
     val context = LocalContext.current
     var privacy by remember { mutableStateOf(false) }
     SubScreen("Impostazioni", onBack) {
@@ -207,7 +211,7 @@ fun SettingsScreen(settings: Settings, onBack: () -> Unit) {
             item { Box(Modifier.appear(0)) { SectionTitle("Aspetto") } }
             item { Box(Modifier.appear(1)) { AppearanceCard(settings) } }
             item { Box(Modifier.appear(2)) { SectionTitle("Notifiche") } }
-            item { Box(Modifier.appear(3)) { NotificationsCard(settings) } }
+            item { Box(Modifier.appear(3)) { NotificationsCard(settings, api) } }
             item { Box(Modifier.appear(4)) { SectionTitle("Aggiornamenti") } }
             item { Box(Modifier.appear(5)) { UpdatesCard(settings) } }
             item { Box(Modifier.appear(6)) { SectionTitle("Dati e spazio") } }
@@ -369,7 +373,10 @@ private fun ThemeMini(dark: Boolean, modifier: Modifier) {
 }
 
 @Composable
-private fun NotificationsCard(settings: Settings) {
+private fun NotificationsCard(settings: Settings, api: Api?) {
+    var editingNames by remember { mutableStateOf(false) }
+    val account = api?.let { a -> a.accounts.firstOrNull { it.key == a.current } }
+    if (editingNames && account != null) NamesDialog(account) { editingNames = false }
     val context = LocalContext.current
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -414,6 +421,13 @@ private fun NotificationsCard(settings: Settings) {
                 if (v) withPermission { settings.toggle(alert, true) } else { settings.toggle(alert, false); Notifier.schedule(context, settings.alerts) }
             }
             SettingRow(alert.icon, alert.title, alert.description, onClick = { change(!on) }, trailing = { CheckSwitch(on, change) })
+            if (alert == Alert.Mentions && on && account != null) {
+                val names = Mentions.names(context, account)
+                SettingRow(
+                    Icons.Rounded.Badge, "Nomi da cercare", names.joinToString(", ").ifBlank { "Nessuno" },
+                    onClick = { editingNames = true }, trailing = { Chevron() }
+                )
+            }
             if (i < Alert.entries.lastIndex) RowDivider()
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -553,4 +567,34 @@ private fun StorageCard() {
             trailing = { TextButton({ clear { Storage.clearDownloads(context) } }, enabled = downloads > 0) { Text("Svuota") } }
         )
     }
+}
+
+@Composable
+private fun NamesDialog(account: Account, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var text by remember { mutableStateOf(Mentions.names(context, account).joinToString(", ")) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Badge, null) },
+        title = { Text("Nomi da cercare") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "L'app ti avvisa quando uno di questi nomi compare in agenda. Separali con una virgola: ad esempio il cognome e il cognome con l'iniziale del nome.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Nomi") }, singleLine = true)
+                Text(
+                    "Se in classe c'è qualcuno con lo stesso cognome, aggiungi anche il nome per evitare avvisi sbagliati.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton({ Mentions.save(context, account, text); onDismiss() }) { Text("Salva") }
+        },
+        dismissButton = {
+            TextButton({ Mentions.save(context, account, Mentions.defaultNames(account.name).joinToString(", ")); onDismiss() }) { Text("Ripristina") }
+        }
+    )
 }

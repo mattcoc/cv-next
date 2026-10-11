@@ -73,12 +73,45 @@ class LogicTest {
 
     @Test
     fun recognisesTests() {
-        fun ev(notes: String, homework: Boolean = false) = Event("2026-10-14", "", "Storia", "Rossi", notes, homework)
-        assertTrue(ev("Verifica scritta capitoli 3-4").isTest)
-        assertTrue(ev("Interrogazione programmata").isTest)
-        assertTrue(ev("Compito in classe di matematica").isTest)
-        assertFalse(ev("Uscita didattica al museo").isTest)
-        assertFalse(ev("Svolgere il test di verifica", homework = true).isTest)
+        val yes = listOf(
+            "Verifica scritta capitoli 3-4",
+            "Interrogazione programmata",
+            "Interrogati: Rossi, Bianchi, Verdi",
+            "Compito in classe di matematica",
+            "Compito di storia sul Risorgimento",
+            "Compito: equazioni di secondo grado",
+            "Prova scritta di italiano",
+            "Simulazione della seconda prova",
+            "Test d'ingresso di inglese",
+            "Verifica di recupero per chi ha l'insufficienza"
+        )
+        val no = listOf(
+            "Esercizi in preparazione al compito",
+            "Ripassare per la verifica di giovedì",
+            "Studiare il capitolo 3 per l'interrogazione",
+            "Correzione della verifica",
+            "Consegna della verifica corretta",
+            "Svolgere il test di verifica caricato su classroom",
+            "Compito per casa: pag. 12 es. 3",
+            "Prova a risolvere gli esercizi da 1 a 5",
+            "Uscita didattica al museo",
+            "Pag. 127 es. 3 come suddiviso in classe",
+            "Portare il materiale per la verifica di laboratorio"
+        )
+        yes.forEach { assertTrue("dovrebbe essere una verifica: $it", TestDetector.isTest(it)) }
+        no.forEach { assertFalse("non dovrebbe essere una verifica: $it", TestDetector.isTest(it)) }
+    }
+
+    @Test
+    fun findsMyName() {
+        val names = Mentions.defaultNames("Matteo De Rossi")
+        assertEquals(listOf("De Rossi"), names)
+        assertTrue(Mentions.matches("Interrogazione: DE ROSSI, Bianchi", names))
+        assertTrue(Mentions.matches("Interrogati: de rossi m., verdi", names))
+        assertFalse(Mentions.matches("Interrogati: Rossi, Bianchi", names))
+        assertTrue(Mentions.matches("Recupero per Nicolò", listOf("Nicolo")))
+        assertFalse(Mentions.matches("Interrogazione: Rossini", listOf("Rossi")))
+        assertFalse(Mentions.matches("Interrogazione: Al", listOf("Al")))
     }
 
     @Test

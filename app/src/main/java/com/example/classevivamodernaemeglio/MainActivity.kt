@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -137,7 +138,7 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) {
                     when (debugScreen) {
                         "settings" -> SettingsScreen(settings) { finish() }
-                        "grades" -> GradesScreen(DebugData.grades, DebugData.periods)
+                        "grades" -> Box(Modifier.statusBarsPadding()) { GradesScreen(DebugData.grades, DebugData.periods) }
                         else -> App(api, settings, target, targetAccount)
                     }
                 }

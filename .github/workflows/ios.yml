@@ -10,6 +10,9 @@ on:
         description: 'Schermate da fotografare, separate da spazio'
         default: 'today grades subject agenda notices functions absences settings login'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-26
@@ -72,17 +75,21 @@ jobs:
             done
           done
 
-      - name: Stampa gli screenshot nel log
+      - name: Salva gli screenshot nel branch
         run: |
-          cd shots
-          for p in *.png; do
-            f=${p%.png}
-            sips -Z 900 -s format jpeg -s formatOptions 70 "$p" --out "$f.jpg" >/dev/null
-            echo "=== BEGIN $f ==="
-            base64 -i "$f.jpg"
-            echo
-            echo "=== END $f ==="
+          mkdir -p ios/screenshots
+          for p in shots/*.png; do
+            f=$(basename "${p%.png}")
+            sips -Z 1000 -s format jpeg -s formatOptions 75 "$p" --out "ios/screenshots/$f.jpg" >/dev/null
           done
+          git config user.name "Matteo"
+          git config user.email "matteorubin1234@gmail.com"
+          git add ios/screenshots
+          if ! git diff --cached --quiet; then
+            git commit -m "Screenshot iOS [skip ci]"
+            git pull --rebase origin ios
+            git push origin HEAD:ios
+          fi
 
       - uses: actions/upload-artifact@v4
         with:

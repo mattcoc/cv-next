@@ -16,10 +16,13 @@ final class Res<T>: Loadable {
     var error: String?
     var loading = false
     var ready: Bool { data != nil }
-    @ObservationIgnored private let load: () async throws -> T
+    private let load: () async throws -> T
 
     init(_ load: @escaping () async throws -> T) { self.load = load }
-    init(value: T) { data = value; load = { value } }
+    init(value: T) {
+        load = { value }
+        data = value
+    }
 
     func refresh() async {
         loading = true

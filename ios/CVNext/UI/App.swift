@@ -157,7 +157,7 @@ struct PageView: View {
         case .settings: SettingsView()
         case .agenda(let filter): AgendaView(filter: filter).navigationTitle("Agenda")
         case .notice(let n): NoticeView(notice: n)
-        case .web(let title, let url): WebPage(title: title, url: url)
+        case .web(let title, let url): WebScreen(title: title, url: url)
         case .subject(let s): SubjectView(subject: s)
         }
     }

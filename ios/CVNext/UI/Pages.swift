@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import QuickLook
 
 struct FunctionsView: View {
     @Environment(Model.self) private var model
@@ -291,7 +292,7 @@ struct DocumentsView: View {
 }
 
 /// Pagina del registro web, già con l'accesso fatto.
-struct WebPage: View {
+struct WebScreen: View {
     let title: String
     let url: String
     @Environment(Model.self) private var model

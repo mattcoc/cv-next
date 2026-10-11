@@ -1,0 +1,52 @@
+name: Smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'release o debug'
+        default: 'release'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compila
+        run: |
+          chmod +x gradlew
+          V=${{ github.event.inputs.variant || 'release' }}
+          ./gradlew assemble${V^}
+          cp app/build/outputs/apk/$V/app-$V.apk app.apk
+
+      - name: Abilita KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Avvia l'app sull'emulatore
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb install -r app.apk
+            adb logcat -c
+            adb shell monkey -p io.github.mattcoc.cvnext -c android.intent.category.LAUNCHER 1
+            sleep 20
+            adb logcat -d -b crash > crash.txt || true
+            adb logcat -d | grep -E "AndroidRuntime|FATAL|cvnext" | tail -200 > app.txt || true
+            echo "=== CRASH ==="; cat crash.txt
+            echo "=== APP ==="; cat app.txt
+            adb shell pidof io.github.mattcoc.cvnext && echo "APP IN ESECUZIONE" || echo "APP NON IN ESECUZIONE"

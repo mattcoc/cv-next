@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ios
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-26
@@ -87,18 +91,22 @@ jobs:
 
       - name: Salva gli screenshot nel branch
         run: |
-          mkdir -p ios/screenshots
+          mkdir -p jpg
           for p in shots/*.png; do
             f=$(basename "${p%.png}")
-            sips -Z 1000 -s format jpeg -s formatOptions 75 "$p" --out "ios/screenshots/$f.jpg" >/dev/null
+            sips -Z 1000 -s format jpeg -s formatOptions 75 "$p" --out "jpg/$f.jpg" >/dev/null
           done
+          # Parte dall'ultima versione del branch, così non ci sono conflitti con altre run.
+          git fetch origin ios
+          git checkout -B ios origin/ios
+          mkdir -p ios/screenshots
+          cp jpg/*.jpg ios/screenshots/
           git config user.name "Matteo"
           git config user.email "matteorubin1234@gmail.com"
           git add ios/screenshots
           if ! git diff --cached --quiet; then
             git commit -m "Screenshot iOS [skip ci]"
-            git pull --rebase origin ios
-            git push origin HEAD:ios
+            git push origin ios
           fi
 
       - uses: actions/upload-artifact@v4

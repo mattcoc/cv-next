@@ -1,0 +1,90 @@
+name: iOS
+
+on:
+  push:
+    branches: [ios]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      screens:
+        description: 'Schermate da fotografare, separate da spazio'
+        default: 'today grades subject agenda notices functions absences settings login'
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Genera il progetto Xcode
+        run: |
+          brew install xcodegen
+          cd ios && xcodegen generate
+          xcodebuild -version
+
+      - name: Scegli il simulatore
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          phones = [x for k, v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone') and 'Pro' in x['name'] and 'Max' not in x['name']]
+          phones = phones or [x for k, v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone')]
+          print(phones[-1]['udid'])")
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl list devices | grep "$UDID"
+
+      - name: Compila per il simulatore
+        run: |
+          cd ios
+          xcodebuild -project CVNext.xcodeproj -scheme CVNext -configuration Debug \
+            -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build -quiet
+
+      - name: Compila per iPhone (IPA non firmata)
+        run: |
+          cd ios
+          xcodebuild -project CVNext.xcodeproj -scheme CVNext -configuration Release \
+            -destination "generic/platform=iOS" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build -quiet
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/CVNext.app Payload/
+          zip -qr CVNext.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CVNext-ipa
+          path: ios/CVNext.ipa
+
+      - name: Fotografa le schermate
+        run: |
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID"
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryLevel 100 --cellularBars 4
+          xcrun simctl install "$UDID" ios/build/Build/Products/Debug-iphonesimulator/CVNext.app
+          mkdir -p shots
+          for mode in light dark; do
+            xcrun simctl ui "$UDID" appearance $mode
+            for screen in ${{ github.event.inputs.screens || 'today grades subject agenda notices functions absences settings login' }}; do
+              xcrun simctl terminate "$UDID" io.github.mattcoc.cvnext 2>/dev/null || true
+              xcrun simctl launch "$UDID" io.github.mattcoc.cvnext -debugScreen $screen
+              sleep 6
+              xcrun simctl io "$UDID" screenshot shots/${screen}_${mode}.png
+            done
+          done
+
+      - name: Stampa gli screenshot nel log
+        run: |
+          cd shots
+          for p in *.png; do
+            f=${p%.png}
+            sips -Z 900 -s format jpeg -s formatOptions 70 "$p" --out "$f.jpg" >/dev/null
+            echo "=== BEGIN $f ==="
+            base64 -i "$f.jpg"
+            echo
+            echo "=== END $f ==="
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/*.png

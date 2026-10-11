@@ -1,0 +1,5 @@
+build/
+Payload/
+*.ipa
+CVNext.xcodeproj/
+CVNext/Info.plist

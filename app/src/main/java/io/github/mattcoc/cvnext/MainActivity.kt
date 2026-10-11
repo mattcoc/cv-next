@@ -150,6 +150,7 @@ class MainActivity : ComponentActivity() {
                             ) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
+                        "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
                         "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
                         else -> App(api, settings, target, targetAccount)
                     }
@@ -448,7 +449,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
-                        Section.Agenda -> Refreshable(agenda) { AgendaScreen(agenda.data!!, agendaFilter) { agendaFilter = it } }
+                        Section.Agenda -> Refreshable(agenda) { AgendaScreen(agenda.data!!, agendaFilter, lessons.data.orEmpty()) { agendaFilter = it } }
                         Section.Bacheca -> Refreshable(notices) { NoticesScreen(notices.data!!) { stack.add(Page.NoticePage(it)) } }
                         Section.Funzioni -> FunctionsScreen({ stack.add(it) }, { agendaFilter = "Compiti"; section = Section.Agenda }) {
                             if (it == Section.Agenda) agendaFilter = "Tutto"

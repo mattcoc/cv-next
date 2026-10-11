@@ -179,15 +179,26 @@ fun Item(
     supporting: String? = null,
     bold: Boolean = false,
     expandable: Boolean = false,
+    footer: String? = null,
     onClick: (() -> Unit)? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
+    val supportingContent: (@Composable () -> Unit)? =
+        if (supporting.isNullOrBlank() && footer.isNullOrBlank()) null
+        else ({
+            Column {
+                if (!supporting.isNullOrBlank()) { if (expandable) ExpandableText(supporting) else Text(supporting) }
+                if (!footer.isNullOrBlank()) {
+                    Text(footer, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        })
     val body: @Composable () -> Unit = {
         ListItem(
             headlineContent = { Text(headline, fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium) },
             overlineContent = overline?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
-            supportingContent = supporting?.takeIf { it.isNotBlank() }?.let { { if (expandable) ExpandableText(it) else Text(it) } },
+            supportingContent = supportingContent,
             leadingContent = leading,
             trailingContent = trailing,
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -353,24 +364,40 @@ fun LessonItem(l: Lesson) {
     Item(l.subject, listOf(l.author, length).filter(String::isNotBlank).joinToString(" · "), l.topic, expandable = true, leading = { Circle(hours, c.primaryContainer, c.onPrimaryContainer) })
 }
 
+/** Tipo dell'evento in parole: compito, verifica, interrogazione o evento. */
+fun eventKind(e: Event) = when {
+    e.isTest -> e.testKind
+    e.homework -> "Compito"
+    else -> "Evento"
+}
+
+/** Stessa icona e stessi colori per lo stesso tipo di evento, in tutta l'app. */
 @Composable
-fun EventItem(e: Event, showDate: Boolean = false) {
+fun EventIcon(e: Event) {
     val c = MaterialTheme.colorScheme
-    val who = e.subject.ifBlank { e.author }
-    val kind = if (e.isTest) "Verifica" else if (e.homework) "Compito" else null
+    when {
+        e.isTest -> IconCircle(if (e.testKind == "Interrogazione") Icons.Rounded.RecordVoiceOver else Icons.Rounded.Quiz, c.primaryContainer, c.onPrimaryContainer)
+        e.homework -> IconCircle(Icons.Rounded.EditNote, c.tertiaryContainer, c.onTertiaryContainer)
+        else -> IconCircle(Icons.Rounded.Event, c.secondaryContainer, c.onSecondaryContainer)
+    }
+}
+
+/** Titolo la materia, sotto il docente; se la materia non si sa, il titolo è il docente. */
+@Composable
+fun EventItem(e: Event, teachers: Teachers, showDate: Boolean = false, mine: Boolean = false) {
+    val subject = teachers.subject(e)
     Item(
-        who.ifBlank { kind ?: "Evento" },
+        subject.ifBlank { e.author.ifBlank { eventKind(e) } },
         listOfNotNull(
+            eventKind(e),
             if (showDate) shortDate(e.date) else null,
-            e.time.ifBlank { "Tutto il giorno" },
-            kind,
-            if (e.subject.isNotBlank()) e.author else null
+            // L'orario dei compiti è solo quello di inserimento: non serve.
+            if (e.homework) null else e.time.ifBlank { "Tutto il giorno" },
+            if (mine) "Ci sei anche tu" else null
         ).filter(String::isNotBlank).joinToString(" · "),
-        e.notes, expandable = true,
-        leading = {
-            if (e.homework) IconCircle(Icons.Rounded.EditNote, c.tertiaryContainer, c.onTertiaryContainer)
-            else IconCircle(Icons.Rounded.Event, c.secondaryContainer, c.onSecondaryContainer)
-        }
+        e.notes.tidy(), expandable = true, bold = mine,
+        footer = if (subject.isNotBlank()) e.author else null,
+        leading = { EventIcon(e) }
     )
 }
 
@@ -393,6 +420,7 @@ fun TodayScreen(
         mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
     }
     val pending = absences.count { !it.justified }
+    val teachers = remember(lessons) { Teachers(lessons) }
     Screen {
         item {
             Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp).appear(0)) {
@@ -455,8 +483,13 @@ fun TodayScreen(
         }
         val tests = agenda.filter { it.isTest && it.date >= today.toString() && it.date <= today.plusDays(14).toString() }
         if (tests.isNotEmpty()) {
-            item { Box(Modifier.appear(2)) { Header("Verifiche in arrivo") } }
-            animItems(tests.take(3), "tests", 2) { TestItem(it, today, Mentions.matches("${it.notes} ${it.subject}", myNames)) }
+            item {
+                Box(Modifier.appear(2)) {
+                    if (tests.size > 3) Header("Verifiche e interrogazioni", "Tutte (${tests.size})") { open(Section.Agenda) }
+                    else Header("Verifiche e interrogazioni")
+                }
+            }
+            animItems(tests.take(3), "tests", 2) { TestItem(it, today, teachers, Mentions.matches("${it.notes} ${it.subject}", myNames)) }
         }
         item { Box(Modifier.appear(2)) { Header("La giornata") } }
         item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
@@ -464,7 +497,7 @@ fun TodayScreen(
             Box(Modifier.appear(4)) {
                 DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
                     DayContent(
-                        day, today, lessons, agenda, grades, absences,
+                        day, today, lessons, agenda, grades, absences, teachers,
                         reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
                     )
                 }
@@ -500,13 +533,17 @@ fun TodayScreen(
 }
 
 @Composable
-fun TestItem(e: Event, today: LocalDate, mine: Boolean = false) {
+fun TestItem(e: Event, today: LocalDate, teachers: Teachers, mine: Boolean = false) {
     val days = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.parse(e.date))
     val c = MaterialTheme.colorScheme
-    val (bg, fg) = if (days <= 1) c.errorContainer to c.onErrorContainer else c.tertiaryContainer to c.onTertiaryContainer
+    val (bg, fg) = if (days <= 1) c.errorContainer to c.onErrorContainer else c.secondaryContainer to c.onSecondaryContainer
+    val subject = teachers.subject(e)
     Item(
-        e.subject.ifBlank { e.author }, longDate(e.date) + if (mine) " · Ci sei anche tu" else "", e.notes, expandable = true, bold = mine,
-        leading = { IconCircle(Icons.Rounded.Quiz, c.surfaceContainerHighest, c.onSurfaceVariant) },
+        subject.ifBlank { e.author.ifBlank { e.testKind } },
+        listOfNotNull(e.testKind, shortDate(e.date), if (mine) "Ci sei anche tu" else null).joinToString(" · "),
+        e.notes.tidy(), expandable = true, bold = mine,
+        footer = if (subject.isNotBlank()) e.author else null,
+        leading = { EventIcon(e) },
         trailing = {
             Text(
                 when (days) { 0L -> "Oggi"; 1L -> "Domani"; else -> "Tra $days giorni" },
@@ -537,8 +574,9 @@ fun ReminderDialog(day: LocalDate, onDismiss: () -> Unit, onSave: (String) -> Un
 }
 
 @Composable
-fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit) {
+fun AgendaScreen(events: List<Event>, filter: String, lessons: List<Lesson> = emptyList(), onFilter: (String) -> Unit) {
     val today = remember { LocalDate.now() }
+    val teachers = remember(lessons) { Teachers(lessons) }
     val days = remember { (-30L..30L).map { today.plusDays(it) } }
     var selected by rememberSaveable { mutableStateOf(today.toString()) }
     val byDay = remember(events) { events.groupBy { it.date } }
@@ -558,23 +596,23 @@ fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             DayLabel(day)
                             if (list.isEmpty()) Empty("Niente in programma")
-                            list.forEach { EventItem(it) }
+                            list.forEach { EventItem(it, teachers) }
                         }
                     }
                 }
             }
             val next = events.filter { it.date > selected && it.date > today.toString() }
             if (next.isNotEmpty()) item { Box(Modifier.appear(3)) { Header("Prossimi giorni") } }
-            animItems(next, "next-$selected", 4) { EventItem(it, showDate = true) }
+            animItems(next, "next-$selected", 4) { EventItem(it, teachers, showDate = true) }
         } else {
             if (homework.isEmpty()) item { Empty("Nessun compito nei prossimi 30 giorni") }
             homework.groupBy { it.date }.entries.forEachIndexed { i, (date, l) ->
                 item("h-$filter-$date") { Box(Modifier.appear(i + 1)) { Header(longDate(date)) } }
-                animItems(l, "f-$filter-$date", i + 2) { EventItem(it) }
+                animItems(l, "f-$filter-$date", i + 2) { EventItem(it, teachers) }
             }
             if (pastHomework.isNotEmpty()) {
                 item("past-header") { Header("Compiti passati") }
-                animItems(pastHomework, "past-$filter") { EventItem(it, showDate = true) }
+                animItems(pastHomework, "past-$filter") { EventItem(it, teachers, showDate = true) }
             }
         }
     }
@@ -695,6 +733,7 @@ fun DayLabel(day: LocalDate) = Row(Modifier.fillMaxWidth().padding(horizontal = 
 @Composable
 fun DayContent(
     day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: List<Event>, grades: List<Grade>, absences: List<Absence>,
+    teachers: Teachers = remember(lessons) { Teachers(lessons) },
     reminders: List<Reminder> = emptyList(), onAddReminder: (() -> Unit)? = null, onRemoveReminder: (Reminder) -> Unit = {}
 ) {
     val d = day.toString()
@@ -719,7 +758,7 @@ fun DayContent(
         }
         if (dayEvents.isNotEmpty()) {
             small(if (dayEvents.all { it.homework }) "Compiti" else "Compiti ed eventi")
-            dayEvents.forEach { EventItem(it) }
+            dayEvents.forEach { EventItem(it, teachers) }
         }
         if (reminders.isNotEmpty()) {
             small("I tuoi promemoria")

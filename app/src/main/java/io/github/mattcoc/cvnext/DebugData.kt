@@ -24,13 +24,15 @@ object DebugData {
     val lessons = listOf(
         Lesson(day(0), 1, 1, "Lingua e Letteratura Italiana", "Tipologia C. Esempio di costruzione del tema", "Panzeri Maddalena"),
         Lesson(day(0), 2, 2, "Elettrotecnica ed Elettronica", "Induttore, induttanza e legge di Hopkinson", "Ricci Claudio"),
-        Lesson(day(0), 4, 1, "Lingua Inglese", "Present perfect: esercizi", "Garato Giulia")
+        Lesson(day(0), 4, 1, "Lingua Inglese", "Present perfect: esercizi", "Garato Giulia"),
+        Lesson(day(-1), 1, 2, "Sistemi Automatici", "Diagrammi di flusso", "De Rito Mauro")
     )
+    // Come nel registro vero: la materia degli eventi spesso è vuota e c'è solo il docente.
     val agenda = listOf(
-        Event(day(0), "12:00", "Elettrotecnica ed Elettronica", "Ricci Claudio", "Svolgere il test di verifica caricato su Classroom", true, 1),
-        Event(day(0), "08:00", "Lingua Inglese", "Garato Giulia", "Pag. 127 es. 3", true, 2),
-        Event(day(2), "", "Sistemi e Reti", "De Rito Mauro", "Verifica: circuiti di condizionamento e algoritmi", false, 3),
-        Event(day(3), "", "Elettrotecnica ed Elettronica", "Ricci Claudio", "Interrogazione", false, 4)
+        Event(day(0), "12:00", "", "Ricci Claudio", "Svolgere il test di verifica caricato su Classroom", true, 1),
+        Event(day(0), "08:00", "", "Garato Giulia", "Pag. 127 es. 3", true, 2),
+        Event(day(2), "", "", "De Rito Mauro", "Verifica di sistemi  : circuiti di condizionamento e algoritmi", false, 3),
+        Event(day(3), "", "", "Ricci Claudio", "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", false, 4)
     )
     val reminders = listOf(Reminder("1", "debug", day(0), "Portare il libro di disegno"))
 

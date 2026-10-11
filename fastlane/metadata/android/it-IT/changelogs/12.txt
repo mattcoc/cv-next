@@ -1,0 +1,3 @@
+• Nella schermata Oggi e in Agenda il titolo è la materia, non più il nome del docente
+• Verifiche e interrogazioni distinte, con icone diverse
+• Testo degli eventi più leggibile (niente più frasi tutte in maiuscolo o spazi doppi)

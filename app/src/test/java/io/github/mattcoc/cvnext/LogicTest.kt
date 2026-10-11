@@ -120,4 +120,35 @@ class LogicTest {
         assertEquals(LocalDate.of(2026, 10, 13), Evening.nextSchoolDay(LocalDate.of(2026, 10, 12)))
         assertEquals(LocalDate.of(2026, 10, 12), Evening.nextSchoolDay(LocalDate.of(2026, 10, 11)))
     }
+
+    @Test
+    fun eventSubjectComesFromTheTeachersLessons() {
+        val lessons = listOf(
+            Lesson("2026-10-01", 1, 1, "Sistemi Automatici", "", "De Rito Mauro"),
+            Lesson("2026-10-01", 2, 1, "Elettrotecnica ed Elettronica", "", "Ricchi Claudio"),
+            Lesson("2026-10-02", 2, 2, "Elettrotecnica ed Elettronica", "", "Ricchi Claudio"),
+            Lesson("2026-10-03", 4, 1, "Laboratorio Tecnologico", "", "Ricchi Claudio, Bianchi Luca")
+        )
+        val t = Teachers(lessons)
+        fun ev(author: String, notes: String, subject: String = "") = Event("2026-10-13", "", subject, author, notes, false)
+        assertEquals("Sistemi Automatici", t.subject(ev("De Rito Mauro", "Verifica")))
+        assertEquals("Elettrotecnica ed Elettronica", t.subject(ev("Ricchi Claudio", "Interrogazione")))
+        assertEquals("Laboratorio Tecnologico", t.subject(ev("Ricchi Claudio", "Verifica di laboratorio")))
+        assertEquals("Storia", t.subject(ev("Ricchi Claudio", "", "Storia")))
+        assertEquals("", t.subject(ev("Sconosciuto", "Verifica")))
+    }
+
+    @Test
+    fun agendaTextIsTidied() {
+        assertEquals("Verifica di sistemi: circuiti", "Verifica di sistemi  : circuiti".tidy())
+        assertEquals("Interrogazione elettrotecnica: Casotto, Nardo", "INTERROGAZIONE ELETTROTECNICA: Casotto, Nardo".tidy())
+        assertEquals("Portare il libro", "PORTARE IL LIBRO".tidy())
+        assertEquals("pag 127 es 3", "pag 127 es 3".tidy())
+    }
+
+    @Test
+    fun testKind() {
+        assertEquals("Interrogazione", Event("2026-10-13", "", "", "", "INTERROGAZIONE: Rossi", false).testKind)
+        assertEquals("Verifica", Event("2026-10-13", "", "", "", "Verifica unit 9", false).testKind)
+    }
 }

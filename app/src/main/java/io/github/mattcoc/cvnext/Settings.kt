@@ -528,7 +528,7 @@ private fun UpdatesCard(settings: Settings) {
         }
         HorizontalDivider(color = c.surfaceContainerHigh)
         SettingRow(
-            Icons.Rounded.Notifications, "Controlla all'avvio", "Una volta al giorno, con un avviso in Oggi",
+            Icons.Rounded.Notifications, "Controlla all'avvio", "Una volta al giorno, con un avviso in Home",
             onClick = { settings.updateAuto(!settings.autoUpdate) },
             trailing = { CheckSwitch(settings.autoUpdate) { settings.updateAuto(it) } }
         )

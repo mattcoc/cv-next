@@ -367,9 +367,9 @@ class Res<T>(private val load: suspend () -> T) {
     }
 }
 
-/** [inBar] falso: la sezione si apre da Oggi e da Funzioni ma non ha un tasto nella barra in basso. */
+/** [inBar] falso: la sezione si apre da Home e da Funzioni ma non ha un tasto nella barra in basso. */
 enum class Section(val label: String, val icon: ImageVector, val selected: ImageVector, val inBar: Boolean = true) {
-    Oggi("Oggi", Icons.Outlined.Home, Icons.Rounded.Home),
+    Oggi("Home", Icons.Outlined.Home, Icons.Rounded.Home),
     Voti("Voti", Icons.Outlined.Grade, Icons.Rounded.Grade),
     Agenda("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth, inBar = false),
     Bacheca("Bacheca", Icons.Outlined.Campaign, Icons.Rounded.Campaign),

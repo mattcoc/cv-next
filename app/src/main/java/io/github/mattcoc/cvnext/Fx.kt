@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState

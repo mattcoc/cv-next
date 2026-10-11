@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,5 +69,22 @@ class LogicTest {
     @Test
     fun prettyKeepsSmallWordsLowercase() {
         assertEquals("Lingua e Letteratura Italiana", "LINGUA E LETTERATURA ITALIANA".pretty())
+    }
+
+    @Test
+    fun recognisesTests() {
+        fun ev(notes: String, homework: Boolean = false) = Event("2026-10-14", "", "Storia", "Rossi", notes, homework)
+        assertTrue(ev("Verifica scritta capitoli 3-4").isTest)
+        assertTrue(ev("Interrogazione programmata").isTest)
+        assertTrue(ev("Compito in classe di matematica").isTest)
+        assertFalse(ev("Uscita didattica al museo").isTest)
+        assertFalse(ev("Svolgere il test di verifica", homework = true).isTest)
+    }
+
+    @Test
+    fun nextSchoolDaySkipsSunday() {
+        assertEquals(LocalDate.of(2026, 10, 12), Evening.nextSchoolDay(LocalDate.of(2026, 10, 10)))
+        assertEquals(LocalDate.of(2026, 10, 13), Evening.nextSchoolDay(LocalDate.of(2026, 10, 12)))
+        assertEquals(LocalDate.of(2026, 10, 12), Evening.nextSchoolDay(LocalDate.of(2026, 10, 11)))
     }
 }

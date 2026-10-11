@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -35,13 +35,15 @@ object Notifier {
         runCatching {
             val wm = WorkManager.getInstance(context)
             if (enabled.isEmpty() && !HomeworkWidget.hasWidgets(context)) {
-                wm.cancelUniqueWork("check")
+                wm.cancelUniqueWork("checks")
                 return
             }
             val request = PeriodicWorkRequestBuilder<CheckWorker>(1, TimeUnit.HOURS)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
-            wm.enqueueUniquePeriodicWork("check", ExistingPeriodicWorkPolicy.KEEP, request)
+            // "check" era il nome usato prima del cambio di pacchetto: quel lavoro puntava a una classe che non esiste più.
+            wm.cancelUniqueWork("check")
+            wm.enqueueUniquePeriodicWork("checks", ExistingPeriodicWorkPolicy.KEEP, request)
         }
     }
 

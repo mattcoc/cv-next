@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import android.Manifest
 import android.content.Context
@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Campaign
@@ -96,6 +97,16 @@ class Settings(context: Context) {
         private set
     var autoUpdate by mutableStateOf(prefs.getBoolean("autoUpdate", true))
         private set
+    var evening by mutableStateOf(prefs.getBoolean("evening", false))
+        private set
+    var eveningHour by mutableIntStateOf(prefs.getInt("eveningHour", 19))
+        private set
+
+    fun updateEvening(on: Boolean = evening, hour: Int = eveningHour) {
+        evening = on
+        eveningHour = hour
+        prefs.edit().putBoolean("evening", on).putInt("eveningHour", hour).apply()
+    }
 
     private fun read(key: String) = runCatching {
         prefs.getStringSet(key, null)?.mapNotNull { n -> Alert.entries.firstOrNull { it.name == n } }?.toSet()
@@ -176,7 +187,6 @@ private sealed interface UpdateState {
     data class Failed(val message: String) : UpdateState
 }
 
-private const val REPO = "https://github.com/mattcoc/cv-next"
 
 @Composable
 fun SettingsScreen(settings: Settings, onBack: () -> Unit) {
@@ -229,10 +239,6 @@ fun SettingsScreen(settings: Settings, onBack: () -> Unit) {
     )
 }
 
-private fun issueUrl(context: Context): String {
-    val body = "**Cosa è successo**\n\n\n**Cosa ti aspettavi**\n\n\n---\nCV Next ${Updater.installed(context)} · Android ${Build.VERSION.RELEASE} · ${Build.MANUFACTURER} ${Build.MODEL}"
-    return "$REPO/issues/new?body=${Uri.encode(body)}"
-}
 
 @Composable
 private fun SectionTitle(text: String) = Text(
@@ -395,6 +401,22 @@ private fun NotificationsCard(settings: Settings) {
             }
             SettingRow(alert.icon, alert.title, alert.description, onClick = { change(!on) }, trailing = { CheckSwitch(on, change) })
             if (i < Alert.entries.lastIndex) RowDivider()
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+        val setEvening: (Boolean) -> Unit = { on ->
+            if (on) withPermission { settings.updateEvening(on = true); Evening.schedule(context, settings) }
+            else { settings.updateEvening(on = false); Evening.schedule(context, settings) }
+        }
+        SettingRow(
+            Icons.Rounded.Bedtime, "Promemoria della sera",
+            if (settings.evening) "Alle ${settings.eveningHour}:00 compiti, verifiche e promemoria del giorno dopo" else "Compiti, verifiche e promemoria del giorno dopo",
+            onClick = { setEvening(!settings.evening) },
+            trailing = { CheckSwitch(settings.evening, setEvening) }
+        )
+        if (settings.evening) Row(Modifier.padding(72.dp, 0.dp, 16.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(18, 19, 20, 21).forEach { h ->
+                FilterChip(settings.eveningHour == h, { settings.updateEvening(hour = h); Evening.schedule(context, settings) }, { Text("$h:00") })
+            }
         }
         if (any) OutlinedButton(
             {

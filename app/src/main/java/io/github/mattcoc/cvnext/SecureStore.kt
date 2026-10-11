@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec

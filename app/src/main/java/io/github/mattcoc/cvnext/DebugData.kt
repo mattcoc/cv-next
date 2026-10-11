@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import java.time.LocalDate
 
@@ -16,6 +16,9 @@ object DebugData {
         Grade("Matematica", day(-2), "8", 8.0, "Scritto", "", "Trimestre", 1, true, 2),
         Grade("Matematica", day(-9), "6½", 6.5, "Orale", "", "Trimestre", 1, true, 3),
         Grade("Storia", day(-5), "5", 5.0, "Orale", "", "Trimestre", 1, true, 4),
+        Grade("Matematica", day(-16), "5½", 5.5, "Scritto", "", "Trimestre", 1, true, 6),
+        Grade("Matematica", day(-23), "6", 6.0, "Orale", "", "Trimestre", 1, true, 7),
+        Grade("Matematica", day(-30), "4½", 4.5, "Scritto", "", "Trimestre", 1, true, 8),
         Grade("Lingua e Letteratura Italiana", day(-6), "+", null, "Orale", "", "Trimestre", 1, false, 5)
     )
     val lessons = listOf(
@@ -29,6 +32,8 @@ object DebugData {
         Event(day(2), "", "Sistemi e Reti", "De Rito Mauro", "Verifica: circuiti di condizionamento e algoritmi", false, 3),
         Event(day(3), "", "Elettrotecnica ed Elettronica", "Ricci Claudio", "Interrogazione", false, 4)
     )
+    val reminders = listOf(Reminder("1", "debug", day(0), "Portare il libro di disegno"))
+
     val absences = listOf(
         Absence(day(-3), "Ritardo", false, ""),
         Absence(day(-12), "Assenza", true, "Motivi di salute"),

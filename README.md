@@ -18,6 +18,8 @@ La schermata iniziale riassume la giornata:
 - avviso degli **eventi da giustificare** (assenze, ritardi, uscite), con collegamento all'elenco
 - avviso dei **pagamenti da fare** su PagOnline, con importo e scadenza
 - **la giornata**: una striscia con le due settimane prima e dopo oggi; per ogni giorno si vedono insieme assenze, voti presi, compiti ed eventi e lezioni (ora, durata, docente e argomento), scorrendo con uno swipe
+- **verifiche in arrivo**: le verifiche e le interrogazioni delle prossime due settimane in cima, con il conto alla rovescia
+- **promemoria personali** su qualsiasi giorno ("portare il libro di disegno"), salvati solo sul telefono
 - **ultimi 10 voti** in un carosello
 - i prossimi 4 eventi in agenda
 
@@ -28,6 +30,7 @@ La schermata iniziale riassume la giornata:
 - accanto a ogni voto un'icona indica se è scritto, orale o pratico
 - dettaglio di una materia: media dell'anno, media per periodo, tutti i voti con tipo (scritto, orale, …) e commento del docente
 - i voti che non fanno media (in blu sul registro) o annullati sono mostrati a parte e non entrano nel calcolo
+- **grafico dell'andamento** nel dettaglio della materia: i voti nel tempo e come cambia la media
 - **Quanto devo prendere?**: nel dettaglio della materia, il voto che serve al prossimo compito per arrivare alla media scelta (6, 7, 8 o 9) nel periodo in corso
 
 ### Agenda
@@ -67,6 +70,8 @@ Si attivano singolarmente dalle impostazioni:
 - nuove **note**
 - **pagamenti** da effettuare
 
+**Promemoria della sera**: all'ora scelta (dalle 18 alle 21) una notifica con compiti, verifiche e promemoria del giorno di scuola successivo.
+
 L'app controlla le novità di **tutti gli account salvati** circa una volta all'ora (solo con connessione attiva). Al primo controllo registra la situazione attuale, poi avvisa solo delle cose nuove. Toccando una notifica si apre la sezione corrispondente. C'è anche il pulsante "Controlla adesso".
 
 ### Account e personalizzazione
@@ -90,6 +95,7 @@ Dalle impostazioni, "Controlla aggiornamenti" cerca l'ultima versione pubblicata
 - Le credenziali vengono salvate **solo sul telefono**, cifrate con una chiave AES dell'Android Keystore. Servono per rinnovare la sessione in automatico e per l'accesso ai servizi web.
 - L'app comunica con i server di Gruppo Spaggiari (`web.spaggiari.eu`) e, solo quando controlli gli aggiornamenti, con GitHub (`api.github.com`, `github.com`) per scaricare la nuova versione. A GitHub non viene inviato nessun dato personale.
 - Nessun server dello sviluppatore, nessuna statistica, nessuna pubblicità, nessun tracciamento.
+- Se l'app si chiude per un errore, il dettaglio tecnico resta sul telefono: al riavvio si può scegliere se aprire una segnalazione su GitHub, che si rilegge prima di inviarla.
 - I file scaricati (PDF, allegati) restano nella cache dell'app o nella cartella Download se l'utente li salva.
 - La copia dei dati per l'uso offline resta nella memoria privata dell'app e non viene inclusa nei backup.
 - Uscendo da un account vengono cancellati le sue credenziali e i suoi dati salvati; disinstallando l'app viene eliminato tutto.

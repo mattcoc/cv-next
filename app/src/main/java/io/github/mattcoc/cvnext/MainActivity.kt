@@ -1,4 +1,4 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import android.app.Activity
 import android.content.Intent
@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
         val settings = Settings(applicationContext)
         Notifier.channels(this)
         Notifier.schedule(this, settings.alerts)
+        Evening.schedule(this, settings)
         target.value = intent?.getStringExtra("section")
         targetAccount.value = intent?.getStringExtra("account")
         // Solo nella versione di sviluppo: apre direttamente una schermata, per gli screenshot automatici.
@@ -142,10 +143,11 @@ class MainActivity : ComponentActivity() {
                         "today" -> Box(Modifier.statusBarsPadding()) {
                             TodayScreen(
                                 "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
-                                DebugData.absences, emptyList(), {}, {}, null, {}, {}
+                                DebugData.absences, emptyList(), {}, {}, null, {}, {}, DebugData.reminders
                             ) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
+                        "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
                         else -> App(api, settings, target, targetAccount)
                     }
                 }
@@ -193,6 +195,18 @@ fun AppTheme(settings: Settings, content: @Composable () -> Unit) {
 
 @Composable
 fun App(api: Api, settings: Settings, target: MutableState<String?>, targetAccount: MutableState<String?>) {
+    val appContext = LocalContext.current
+    var crash by remember { mutableStateOf(CrashLog.pending(appContext)) }
+    crash?.let { details ->
+        val close = { CrashLog.clear(appContext); crash = null }
+        AlertDialog(
+            onDismissRequest = close,
+            title = { Text("L'app si è chiusa") },
+            text = { Text("L'ultima volta CV Next si è chiusa per un errore. Vuoi aprire una segnalazione su GitHub con i dettagli tecnici? Potrai rileggerla prima di inviarla.") },
+            confirmButton = { TextButton({ openLink(appContext, issueUrl(appContext, "L'app si è chiusa", details)); close() }) { Text("Segnala") } },
+            dismissButton = { TextButton(close) { Text("Ignora") } }
+        )
+    }
     var current by remember { mutableStateOf(api.current) }
     var adding by remember { mutableStateOf(false) }
     LaunchedEffect(targetAccount.value) {
@@ -382,6 +396,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     LaunchedEffect(Unit) { listOf(lessons, grades, agenda, absences, notices, periods, school, payments).forEach { launch { it.refresh() } } }
     val context = LocalContext.current
     var update by remember { mutableStateOf<Release?>(null) }
+    val reminders = remember { ReminderStore(context) }
     LaunchedEffect(Unit) { if (settings.autoUpdate) update = Updater.dailyCheck(context) }
     LaunchedEffect(target.value) {
         target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
@@ -424,7 +439,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             TodayScreen(
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
                                 { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
-                                update, { stack.add(Page.Preferences) }, { update = null }
+                                update, { stack.add(Page.Preferences) }, { update = null },
+                                reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) }
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }

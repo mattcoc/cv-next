@@ -1,6 +1,18 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
+import kotlin.math.roundToInt
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.LocalContentColor
@@ -188,6 +200,7 @@ fun SubjectSheet(subject: String, list: List<Grade>, periods: List<Period>, onDi
                     }
                 }
             }
+            item { Box(Modifier.appear(1)) { TrendCard(list) } }
             item { Box(Modifier.appear(1)) { TargetCard(list, periods) } }
             if (groups.size > 1) item {
                 Row(Modifier.horizontalScroll(rememberScrollState()).appear(1), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -236,6 +249,73 @@ fun TargetCard(list: List<Grade>, periods: List<Period>) {
                 Needed.Impossible -> "Per arrivare a $target servono più di due voti alti."
             }
             Text(text, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/** Andamento dei voti che fanno media: punti per i voti, linea per la media man mano, riga tratteggiata al 6. */
+@Composable
+fun TrendCard(list: List<Grade>) {
+    val points = list.filter { it.counts && it.decimal != null }.sortedBy { it.date }
+    if (points.size < 2) return
+    val c = MaterialTheme.colorScheme
+    val averages = points.indices.map { i -> points.subList(0, i + 1).mapNotNull { it.decimal }.average() }
+    var picked by remember(points) { mutableIntStateOf(points.lastIndex) }
+    val dotColors = points.map { gradeColors(it.decimal).first }
+    val lineColor = c.primary
+    val grid = c.outlineVariant
+    val ring = c.surfaceContainerHigh
+    val low = (points.minOf { it.decimal!! }.coerceAtMost(averages.min()) - 1).coerceAtLeast(1.0).toInt().toDouble()
+    val high = 10.0
+    Card(colors = CardDefaults.cardColors(containerColor = ring)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Andamento", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Box(Modifier.size(8.dp).clip(CircleShape).background(c.onSurfaceVariant))
+                Text(" Voti   ", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Box(Modifier.size(width = 14.dp, height = 2.dp).background(lineColor))
+                Text(" Media", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+            }
+            val g = points[picked]
+            Text(
+                "${g.value} · ${g.type.ifBlank { "Voto" }} · ${shortDate(g.date)} · media ${num(averages[picked])}",
+                style = MaterialTheme.typography.bodyMedium, color = c.onSurface
+            )
+            Canvas(
+                Modifier.fillMaxWidth().height(140.dp).pointerInput(points) {
+                    detectTapGestures { offset ->
+                        val step = if (points.size > 1) (size.width - 16.dp.toPx()) / (points.size - 1) else 0f
+                        picked = ((offset.x - 8.dp.toPx()) / step).roundToInt().coerceIn(0, points.lastIndex)
+                    }
+                }
+            ) {
+                val pad = 8.dp.toPx()
+                val w = size.width - 2 * pad
+                val h = size.height - 2 * pad
+                fun x(i: Int) = pad + w * i / (points.size - 1)
+                fun y(v: Double) = pad + (h * (1 - (v - low) / (high - low))).toFloat()
+                for (v in listOf(4.0, 6.0, 8.0, 10.0).filter { it >= low }) {
+                    drawLine(
+                        grid, Offset(pad, y(v)), Offset(size.width - pad, y(v)), strokeWidth = 1.dp.toPx(),
+                        pathEffect = if (v == 6.0) PathEffect.dashPathEffect(floatArrayOf(8f, 8f)) else null
+                    )
+                }
+                val path = Path().apply {
+                    averages.forEachIndexed { i, v -> if (i == 0) moveTo(x(i), y(v)) else lineTo(x(i), y(v)) }
+                }
+                drawPath(path, lineColor, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                points.forEachIndexed { i, p ->
+                    val center = Offset(x(i), y(p.decimal!!))
+                    val r = if (i == picked) 7.dp.toPx() else 5.dp.toPx()
+                    drawCircle(ring, r + 2.dp.toPx(), center)
+                    drawCircle(dotColors[i], r, center)
+                }
+            }
+            Row {
+                Text(shortDate(points.first().date), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant)
+                Text("Tocca un punto per i dettagli", style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant)
+                Text(shortDate(points.last().date), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant, textAlign = TextAlign.End)
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.classevivamodernaemeglio"
+    namespace = "io.github.mattcoc.cvnext"
     compileSdk {
         version = release(37)
     }
@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.mattcoc.cvnext"
         minSdk = 26
         targetSdk = 37
-        versionCode = 10
-        versionName = "1.4.1"
+        versionCode = 11
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

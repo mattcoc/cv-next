@@ -1,5 +1,10 @@
-package com.example.classevivamodernaemeglio
+package io.github.mattcoc.cvnext
 
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Quiz
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.RecordVoiceOver
@@ -339,7 +344,7 @@ fun LessonItem(l: Lesson) {
 fun EventItem(e: Event, showDate: Boolean = false) {
     val c = MaterialTheme.colorScheme
     val who = e.subject.ifBlank { e.author }
-    val kind = if (e.homework) "Compito" else null
+    val kind = if (e.homework) "Compito" else if (e.isTest) "Verifica" else null
     Item(
         who.ifBlank { kind ?: "Evento" },
         listOfNotNull(
@@ -360,12 +365,15 @@ fun EventItem(e: Event, showDate: Boolean = false) {
 fun TodayScreen(
     name: String, school: School?, lessons: List<Lesson>, grades: List<Grade>, agenda: List<Event>, absences: List<Absence>,
     payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit,
-    update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit, onAbsences: () -> Unit
+    update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit,
+    reminders: List<Reminder> = emptyList(), onAddReminder: (String, String) -> Unit = { _, _ -> }, onRemoveReminder: (Reminder) -> Unit = {},
+    onAbsences: () -> Unit
 ) {
+    var adding by remember { mutableStateOf<LocalDate?>(null) }
     val today = remember { LocalDate.now() }
     val days = remember { (-14L..14L).map { today.plusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
-    val busy = remember(lessons, agenda, grades, absences) {
-        (lessons.map { it.date } + agenda.map { it.date } + grades.map { it.date.take(10) } + absences.map { it.date.take(10) }).toSet()
+    val busy = remember(lessons, agenda, grades, absences, reminders) {
+        (lessons.map { it.date } + agenda.map { it.date } + grades.map { it.date.take(10) } + absences.map { it.date.take(10) } + reminders.map { it.date }).toSet()
     }
     var selected by rememberSaveable {
         mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
@@ -431,12 +439,20 @@ fun TodayScreen(
                 }
             }
         }
+        val tests = agenda.filter { it.isTest && it.date >= today.toString() && it.date <= today.plusDays(14).toString() }
+        if (tests.isNotEmpty()) {
+            item { Box(Modifier.appear(2)) { Header("Verifiche in arrivo") } }
+            animItems(tests.take(3), "tests", 2) { TestItem(it, today) }
+        }
         item { Box(Modifier.appear(2)) { Header("La giornata") } }
         item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
         item {
             Box(Modifier.appear(4)) {
                 DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
-                    DayContent(day, today, lessons, agenda, grades, absences)
+                    DayContent(
+                        day, today, lessons, agenda, grades, absences,
+                        reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
+                    )
                 }
             }
         }
@@ -455,11 +471,55 @@ fun TodayScreen(
                 }
             }
         }
-        item { Box(Modifier.appear(7)) { Header("In arrivo", "Agenda") { open(Section.Agenda) } } }
-        val upcoming = agenda.filter { it.date >= today.toString() }
-        if (upcoming.isEmpty()) item { Empty("Niente in programma") }
-        animItems(upcoming.take(4), "agenda", 8) { EventItem(it, showDate = true) }
+        item {
+            Box(Modifier.appear(7)) {
+                Item(
+                    "Agenda completa", null, "Compiti ed eventi dei prossimi 30 giorni e compiti passati",
+                    onClick = { open(Section.Agenda) },
+                    leading = { IconCircle(Icons.Rounded.CalendarMonth, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) },
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                )
+            }
+        }
     }
+    adding?.let { day -> ReminderDialog(day, { adding = null }) { text -> onAddReminder(day.toString(), text); adding = null } }
+}
+
+@Composable
+fun TestItem(e: Event, today: LocalDate) {
+    val days = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.parse(e.date))
+    val c = MaterialTheme.colorScheme
+    val (bg, fg) = if (days <= 1) c.errorContainer to c.onErrorContainer else c.tertiaryContainer to c.onTertiaryContainer
+    Item(
+        e.subject.ifBlank { e.author }, longDate(e.date), e.notes, expandable = true,
+        leading = { IconCircle(Icons.Rounded.Quiz, c.surfaceContainerHighest, c.onSurfaceVariant) },
+        trailing = {
+            Text(
+                when (days) { 0L -> "Oggi"; 1L -> "Domani"; else -> "Tra $days giorni" },
+                Modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
+                color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold
+            )
+        }
+    )
+}
+
+@Composable
+fun ReminderDialog(day: LocalDate, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.EditNote, null) },
+        title = { Text("Promemoria") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(longDate(day.toString()), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), placeholder = { Text("Es. portare il libro di disegno") }, minLines = 2)
+                Text("Resta solo su questo telefono.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { TextButton({ onSave(text) }, enabled = text.isNotBlank()) { Text("Salva") } },
+        dismissButton = { TextButton(onDismiss) { Text("Annulla") } }
+    )
 }
 
 @Composable
@@ -619,7 +679,10 @@ fun DayLabel(day: LocalDate) = Row(Modifier.fillMaxWidth().padding(horizontal = 
 
 /** Tutto quello che riguarda un giorno: assenze, voti, compiti ed eventi, lezioni. */
 @Composable
-fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: List<Event>, grades: List<Grade>, absences: List<Absence>) {
+fun DayContent(
+    day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: List<Event>, grades: List<Grade>, absences: List<Absence>,
+    reminders: List<Reminder> = emptyList(), onAddReminder: (() -> Unit)? = null, onRemoveReminder: (Reminder) -> Unit = {}
+) {
     val d = day.toString()
     val dayAbsences = absences.filter { it.date.take(10) == d }
     val dayGrades = grades.filter { it.date.take(10) == d }
@@ -630,7 +693,7 @@ fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: 
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         DayLabel(day)
-        if (dayAbsences.isEmpty() && dayGrades.isEmpty() && dayEvents.isEmpty() && dayLessons.isEmpty()) {
+        if (dayAbsences.isEmpty() && dayGrades.isEmpty() && dayEvents.isEmpty() && dayLessons.isEmpty() && reminders.isEmpty()) {
             Empty(if (day > today) "Niente in programma" else "Nessuna lezione registrata")
         }
         if (dayLessons.isNotEmpty()) {
@@ -641,6 +704,15 @@ fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: 
             small(if (dayEvents.all { it.homework }) "Compiti" else "Compiti ed eventi")
             dayEvents.forEach { EventItem(it) }
         }
+        if (reminders.isNotEmpty()) {
+            small("I tuoi promemoria")
+            reminders.forEach { r ->
+                Item(
+                    r.text, leading = { IconCircle(Icons.Rounded.EditNote, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) },
+                    trailing = { IconButton({ onRemoveReminder(r) }) { Icon(Icons.Rounded.Close, "Elimina promemoria") } }
+                )
+            }
+        }
         if (dayGrades.isNotEmpty()) {
             small("Voti")
             dayGrades.forEach { g -> Item(g.subject, g.type, g.notes, expandable = true, leading = { GradeCircle(g) }) }
@@ -650,6 +722,13 @@ fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: 
             dayAbsences.forEach {
                 val (letter, bg, fg) = absenceStyle(it.type)
                 Item(it.type, null, if (it.justified) "Giustificata" else "Da giustificare", leading = { Circle(letter, bg, fg) })
+            }
+        }
+        onAddReminder?.let { add ->
+            TextButton(add, Modifier.align(Alignment.CenterHorizontally)) {
+                Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Aggiungi promemoria")
             }
         }
     }

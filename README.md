@@ -1,4 +1,6 @@
-# Client alternativo per ClasseViva
+# CV Next
+
+Client alternativo per ClasseViva.
 
 App Android non ufficiale per consultare il registro elettronico ClasseViva, con interfaccia Material You (Jetpack Compose, Material 3, colori dinamici).
 
@@ -8,21 +10,77 @@ App Android non ufficiale per consultare il registro elettronico ClasseViva, con
 
 ## Funzioni
 
-- Oggi: lezioni del giorno con swipe tra i giorni, ultimi voti, prossimi eventi, assenze da giustificare, pagamenti da fare
-- Voti: medie per periodo (trimestre, pentamestre, quadrimestri) e per materia, dettaglio dei voti
-- Agenda: eventi e compiti dei prossimi 30 giorni, filtro compiti
-- Bacheca: circolari con lettore PDF integrato, zoom, download e condivisione
-- Funzioni: scrutini, assenze, note, lezioni, file dei docenti, compiti, più le sezioni del sito (colloqui, sportello, PagOnline, ecc.) aperte con accesso automatico
-- Notifiche configurabili: bacheca, voti, agenda, materiale dei docenti, note, pagamenti
-- Più account, tema chiaro/scuro, scelta del colore
+### Oggi
+La schermata iniziale riassume la giornata:
+- saluto con data, classe e nome della scuola
+- avviso degli **eventi da giustificare** (assenze, ritardi, uscite), con collegamento all'elenco
+- avviso dei **pagamenti da fare** su PagOnline, con importo e scadenza
+- **lezioni** degli ultimi 14 giorni: si scorre tra i giorni con uno swipe o dalla striscia dei giorni; per ogni lezione ci sono ora, materia, docente e argomento
+- **ultimi 10 voti** in un carosello
+- i prossimi 4 eventi in agenda
+
+### Voti
+- media generale con anello colorato (verde se sufficiente, rosso se insufficiente)
+- schede per ogni periodo (trimestre, pentamestre, quadrimestri) più l'intero anno, con media e numero di voti; si apre in automatico il periodo in corso
+- vista **per materia**, con la media e gli ultimi voti di ciascuna, oppure **recenti**, in ordine di data
+- dettaglio di una materia: media dell'anno, media per periodo, tutti i voti con tipo (scritto, orale, …) e commento del docente
+- i voti che non fanno media (in blu sul registro) o annullati sono mostrati a parte e non entrano nel calcolo
+
+### Agenda
+- eventi e compiti dei prossimi 30 giorni, giorno per giorno con swipe, più l'elenco dei giorni successivi
+- filtro **Compiti** che mostra solo i compiti raggruppati per data
+
+### Bacheca
+- circolari e comunicazioni, con quelle non lette in evidenza e filtro per categoria
+- testo della comunicazione e **lettore PDF integrato** per gli allegati: anteprima delle pagine, lettura a schermo intero con zoom, passaggio rapido tra più allegati
+- **download** nella cartella Download e **condivisione** dei PDF
+- aprendo una comunicazione viene segnata come letta
+
+### Funzioni
+Sezione con tutte le altre funzioni del registro.
+
+Dall'app:
+- **Scrutini**: esito degli scrutini, pagelle e documenti della scuola (i PDF si aprono nel lettore integrato)
+- **Assenze**: totale di assenze, ritardi e uscite anticipate, elenco per mese con stato della giustificazione e motivo
+- **Note**: note disciplinari, richiami, annotazioni e sanzioni, con data e docente
+- **Lezioni**: registro delle lezioni degli ultimi 30 giorni con argomenti svolti
+- **File dei docenti**: materiale didattico diviso per docente e cartella (PDF, file, link e testi)
+- scorciatoie a Valutazioni, Bacheca, Agenda e Compiti
+
+Servizi web, aperti dentro l'app **con accesso automatico** (senza reinserire la password):
+- Colloqui, Sportello, PagOnline, Progettiamo la Scuola, Certificazioni, Registro Web completo, Anno precedente
+
+Su tutte le schermate si aggiorna trascinando verso il basso.
+
+### Notifiche
+Si attivano singolarmente dalle impostazioni:
+- nuove comunicazioni in **bacheca**
+- nuovi **voti**
+- nuovi compiti ed eventi in **agenda**
+- nuovo **materiale dei docenti**
+- nuove **note**
+- **pagamenti** da effettuare
+
+L'app controlla le novità circa una volta all'ora (solo con connessione attiva). Al primo controllo registra la situazione attuale, poi avvisa solo delle cose nuove. Toccando una notifica si apre la sezione corrispondente. C'è anche il pulsante "Controlla adesso".
+
+### Account e personalizzazione
+- **più account** (ad esempio più figli o genitore e studente), con passaggio rapido dal menu del profilo
+- tema **sistema, chiaro o scuro**
+- colori **Material You** presi dallo sfondo (Android 12+) oppure uno tra 9 colori: indaco, blu, turchese, verde, giallo, arancio, rosso, rosa, viola
 
 ## Privacy
 
-- Le credenziali vengono salvate **solo sul telefono**, cifrate con Android Keystore (EncryptedSharedPreferences).
+- Le credenziali vengono salvate **solo sul telefono**, cifrate con Android Keystore (EncryptedSharedPreferences). Servono per rinnovare la sessione in automatico e per l'accesso ai servizi web.
 - L'app comunica **esclusivamente con i server di Gruppo Spaggiari** (`web.spaggiari.eu`).
 - Nessun server dello sviluppatore, nessuna statistica, nessuna pubblicità, nessun tracciamento.
 - I file scaricati (PDF, allegati) restano nella cache dell'app o nella cartella Download se l'utente li salva.
 - Uscendo da un account le sue credenziali vengono cancellate; disinstallando l'app viene eliminato tutto.
+
+## Installazione
+
+Scarica l'APK dalla pagina [Releases](../../releases) e aprilo sul telefono (bisogna consentire l'installazione da origini sconosciute). Serve Android 8.0 o superiore.
+
+Permessi usati: solo **Internet** e **Notifiche** (le notifiche vengono chieste solo quando le attivi).
 
 ## Compilazione
 

@@ -63,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view ios >/dev/null 2>&1 || gh release create ios --prerelease --target ios \
+          gh release view ios >/dev/null 2>&1 || gh release create ios --prerelease --latest=false --target ios \
             --title "CV Next per iOS (anteprima)" \
             --notes "IPA non firmata, da installare con SideStore o AltStore. Richiede iOS 26 o successivo. Si aggiorna a ogni modifica del branch ios."
           gh release upload ios ios/CVNext.ipa --clobber

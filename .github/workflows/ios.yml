@@ -68,10 +68,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view ios >/dev/null 2>&1 || gh release create ios --prerelease --latest=false --target ios \
+          # Il vecchio tag "ios" aveva lo stesso nome del branch e confondeva git.
+          gh release delete ios --cleanup-tag -y 2>/dev/null || true
+          gh release view ios-latest >/dev/null 2>&1 || gh release create ios-latest --prerelease --latest=false --target ios \
             --title "CV Next per iOS (anteprima)" \
             --notes "IPA non firmata, da installare con SideStore o AltStore. Richiede iOS 26 o successivo. Si aggiorna a ogni modifica del branch ios."
-          gh release upload ios ios/CVNext.ipa --clobber
+          gh release upload ios-latest ios/CVNext.ipa --clobber
 
       - name: Fotografa le schermate
         run: |
@@ -98,8 +100,8 @@ jobs:
             sips -Z 1000 -s format jpeg -s formatOptions 75 "$p" --out "jpg/$f.jpg" >/dev/null
           done
           # Parte dall'ultima versione del branch, così non ci sono conflitti con altre run.
-          git fetch origin ios
-          git checkout -B ios origin/ios
+          git fetch origin refs/heads/ios:refs/remotes/origin/ios
+          git checkout -B ios refs/remotes/origin/ios
           mkdir -p ios/screenshots
           cp jpg/*.jpg ios/screenshots/
           git config user.name "Matteo"
@@ -107,7 +109,7 @@ jobs:
           git add ios/screenshots
           if ! git diff --cached --quiet; then
             git commit -m "Screenshot iOS [skip ci]"
-            git push origin ios
+            git push origin HEAD:refs/heads/ios
           fi
 
       - uses: actions/upload-artifact@v4

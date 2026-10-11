@@ -1,6 +1,9 @@
 name: Smoke test
 
 on:
+  push:
+    branches: [main]
+    paths: ['app/**', 'gradle/**', '*.gradle.kts', 'gradle.properties']
   workflow_dispatch:
     inputs:
       variant:
@@ -49,4 +52,5 @@ jobs:
             adb logcat -d | grep -E "AndroidRuntime|FATAL|cvnext" | tail -200 > app.txt || true
             echo "=== CRASH ==="; cat crash.txt
             echo "=== APP ==="; cat app.txt
-            adb shell pidof io.github.mattcoc.cvnext && echo "APP IN ESECUZIONE" || echo "APP NON IN ESECUZIONE"
+            if [ -s crash.txt ] || ! adb shell pidof io.github.mattcoc.cvnext; then echo "::error::L'app si è chiusa all'avvio"; exit 1; fi
+            echo "App avviata correttamente"

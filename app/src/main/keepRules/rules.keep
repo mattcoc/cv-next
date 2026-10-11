@@ -10,3 +10,13 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# WorkManager crea il suo database Room via reflection all'avvio (androidx.startup):
+# senza questa regola R8 rimuove il costruttore e l'app si chiude subito.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# I Worker vengono istanziati per nome da WorkManager.
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class * extends androidx.work.InputMerger { <init>(); }

@@ -59,8 +59,9 @@ jobs:
 
       - name: Stampa gli screenshot nel log
         run: |
+          pip install --quiet pillow
           for f in shot1 shot2 shot3; do
-            convert $f.png -resize 540x $f.jpg
+            python3 -c "from PIL import Image; im=Image.open('$f.png').convert('RGB'); im.resize((540, im.height*540//im.width)).save('$f.jpg', quality=85)"
             echo "=== BEGIN $f ==="
             base64 -w 0 $f.jpg
             echo

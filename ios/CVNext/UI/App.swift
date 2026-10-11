@@ -107,7 +107,8 @@ struct HomeView: View {
                 NavigationStack { FunctionsView().chrome("Funzioni") }
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        // Barra sempre intera: non si rimpicciolisce scorrendo.
+        .tabBarMinimizeBehavior(.never)
         .environment(model)
         .sheet(isPresented: $model.showAccount) {
             AccountSheet(onSwitch: onSwitch, onAdd: onAdd, onLogout: onLogout).environment(model)
@@ -115,6 +116,7 @@ struct HomeView: View {
         .task {
             await model.loadAll()
             guard model.debugName == nil else { return }
+            model.update = await Updater.dailyCheck()
             Background.schedule()
             await Evening.reschedule()
         }

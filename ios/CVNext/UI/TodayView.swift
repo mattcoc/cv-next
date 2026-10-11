@@ -53,6 +53,9 @@ struct TodayView: View {
         .padding(.bottom, 6)
 
         Group {
+        if let update = model.update {
+            UpdateBanner(release: update) { withAnimation { model.update = nil } }
+        }
         if pending > 0 {
             NavigationLink(value: Page.absences) {
                 HStack(spacing: 12) {

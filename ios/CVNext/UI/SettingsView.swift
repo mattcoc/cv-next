@@ -11,6 +11,11 @@ struct SettingsView: View {
     @State private var names = ""
     @State private var checking = false
     @State private var cleared = false
+    @AppStorage("autoUpdate") private var autoUpdate = true
+    @State private var updateState: UpdateState = .idle
+    @Environment(\.openURL) private var openURL
+
+    private enum UpdateState: Equatable { case idle, checking, upToDate, available(IosRelease), failed(String) }
 
     private var alerts: Set<AlertKind> {
         Set(alertsRaw.split(separator: ",").compactMap { AlertKind(rawValue: String($0)) })
@@ -121,6 +126,49 @@ struct SettingsView: View {
                     cleared = true
                 }
                 .disabled(cleared)
+            }
+
+            Section {
+                LabeledContent("Versione installata", value: Updater.installedVersion)
+                switch updateState {
+                case .available(let r):
+                    Button { installUpdate(r, openURL) } label: {
+                        Label("Aggiorna con SideStore", systemImage: "arrow.down.app")
+                    }
+                    if let date = r.date {
+                        Text("Nuova versione del \(date.formatted(date: .abbreviated, time: .shortened))").font(.footnote).foregroundStyle(.subtle)
+                    }
+                default:
+                    Button {
+                        updateState = .checking
+                        Task {
+                            do {
+                                let r = try await Updater.latest()
+                                updateState = r.build > Updater.installedBuild ? .available(r) : .upToDate
+                            } catch {
+                                updateState = .failed(error.userText)
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Controlla aggiornamenti")
+                            Spacer()
+                            switch updateState {
+                            case .checking: ProgressView()
+                            case .upToDate: Text("Hai l'ultima versione").foregroundStyle(.subtle)
+                            case .failed(let e): Text(e).font(.caption).foregroundStyle(.red).lineLimit(2)
+                            default: EmptyView()
+                            }
+                        }
+                    }
+                    .disabled(updateState == .checking)
+                }
+                Toggle("Controlla ogni giorno", isOn: $autoUpdate)
+                Link("Pagina della release", destination: Updater.page)
+            } header: {
+                Text("Aggiornamenti")
+            } footer: {
+                Text("Su iOS l'app non può installarsi da sola: il pulsante apre SideStore (o AltStore), che scarica la nuova versione e la installa sopra quella attuale, senza perdere l'accesso.")
             }
 
             Section {

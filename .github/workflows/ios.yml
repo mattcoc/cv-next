@@ -74,6 +74,10 @@ jobs:
             --title "CV Next per iOS (anteprima)" \
             --notes "IPA non firmata, da installare con SideStore o AltStore. Richiede iOS 26 o successivo. Si aggiorna a ogni modifica del branch ios."
           gh release upload ios-latest ios/CVNext.ipa --clobber
+          # L'app legge il numero di build dalle note per sapere se c'è una versione nuova.
+          gh release edit ios-latest --notes "IPA non firmata, da installare con SideStore o AltStore. Richiede iOS 26 o successivo. Si aggiorna a ogni modifica del branch ios.
+
+          Build ${{ github.run_number }}"
 
       - name: Fotografa le schermate
         run: |

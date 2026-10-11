@@ -21,7 +21,7 @@ L'IPA non è firmata: si installa con [SideStore](https://sidestore.io) o [AltSt
 
 ## Differenze da Android
 
-- Niente aggiornamento in-app: su iOS non si possono installare app scaricate.
+- Aggiornamenti: l'app controlla la pre-release `ios-latest` e il pulsante apre SideStore (o AltStore), che installa la nuova IPA sopra quella attuale. Un'app iOS non può installarsi da sola.
 - Le notifiche arrivano quando iOS concede un aggiornamento in background, di solito qualche volta al giorno, non ogni ora.
 - Il promemoria della sera viene preparato in anticipo con i dati dell'ultimo aggiornamento.
 - Gli allegati si aprono con l'anteprima di sistema (zoom, condivisione, salvataggio in File).

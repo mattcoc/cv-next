@@ -51,6 +51,7 @@ final class Model {
     let api: Api
     var tab: AppTab = .today
     var showAccount = false
+    var update: IosRelease?
     @ObservationIgnored var debugName: String?
 
     let lessons: Res<[Lesson]>
@@ -98,6 +99,7 @@ final class Model {
         school = Res(value: School(name: "Istituto Tecnico", city: "Padova PD"))
         payments = Res(value: [])
         reminders.debug()
+        update = IosRelease(build: 999, date: nil, ipa: URL(string: "https://example.com/CVNext.ipa")!)
     }
 
     var name: String { debugName ?? api.name }

@@ -33,6 +33,23 @@ jobs:
           ./gradlew assembleDebug --stacktrace
           cp app/build/outputs/apk/debug/app-debug.apk "cv-next-$VERSION.apk"
 
+      - name: Firma con la chiave del progetto
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Secret KEYSTORE_BASE64 assente: l'APK resta firmato con una chiave di debug temporanea"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/cv-next.jks"
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$APKSIGNER" sign --ks "$RUNNER_TEMP/cv-next.jks" --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" --key-pass env:KEYSTORE_PASSWORD "cv-next-$VERSION.apk"
+          "$APKSIGNER" verify --print-certs "cv-next-$VERSION.apk"
+          rm "$RUNNER_TEMP/cv-next.jks"
+
       - name: Pubblica release
         uses: softprops/action-gh-release@v2
         with:

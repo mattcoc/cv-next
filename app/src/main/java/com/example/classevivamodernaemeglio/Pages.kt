@@ -53,7 +53,7 @@ import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Notes
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
@@ -281,7 +281,7 @@ fun DidacticsScreen(api: Api, teachers: List<DidTeacher>, open: (Page) -> Unit) 
                                     ) {
                                         val icon = when {
                                             item.type == "link" -> Icons.Rounded.Link
-                                            item.type == "text" -> Icons.Rounded.Notes
+                                            item.type == "text" -> Icons.AutoMirrored.Rounded.Notes
                                             item.name.endsWith(".pdf", true) -> Icons.Rounded.PictureAsPdf
                                             else -> Icons.Rounded.Description
                                         }

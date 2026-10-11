@@ -16,6 +16,11 @@ enum Palette {
     static func color(_ i: Int) -> Color { options.indices.contains(i) ? options[i].1 : options[0].1 }
 }
 
+extension ShapeStyle where Self == Color {
+    /// Testo secondario un po' più marcato di `.secondary`, leggibile anche sopra il vetro.
+    static var subtle: Color { Color.primary.opacity(0.72) }
+}
+
 extension EnvironmentValues {
     @Entry var appTint: Color = Palette.color(0)
 }
@@ -85,7 +90,7 @@ struct Loaded<Content: View>: View {
         } else {
             VStack(spacing: 16) {
                 ProgressView().controlSize(.large)
-                Text("Caricamento…").foregroundStyle(.secondary)
+                Text("Caricamento…").foregroundStyle(.subtle)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 96)
@@ -102,7 +107,7 @@ struct OfflineBanner: View {
                 Image(systemName: "icloud.slash")
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Dati dell'ultimo aggiornamento").font(.subheadline.weight(.semibold))
-                    Text(text).font(.caption).foregroundStyle(.secondary)
+                    Text(text).font(.caption).foregroundStyle(.subtle)
                 }
                 Spacer()
                 Text("Riprova").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
@@ -119,7 +124,7 @@ struct MessageView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "icloud.slash").font(.title2).frame(width: 56, height: 56).glassEffect(.regular.tint(.red.opacity(0.3)), in: .circle)
-            Text(text).multilineTextAlignment(.center).foregroundStyle(.secondary)
+            Text(text).multilineTextAlignment(.center).foregroundStyle(.subtle)
             if let retry {
                 Button(action: retry) { Label("Riprova", systemImage: "arrow.clockwise") }.buttonStyle(.glass)
             }
@@ -150,8 +155,8 @@ struct EmptyCard: View {
     var icon: String? = nil
     var body: some View {
         VStack(spacing: 8) {
-            if let icon { Image(systemName: icon).font(.title2).foregroundStyle(.secondary) }
-            Text(text).multilineTextAlignment(.center).foregroundStyle(.secondary)
+            if let icon { Image(systemName: icon).font(.title2).foregroundStyle(.subtle) }
+            Text(text).multilineTextAlignment(.center).foregroundStyle(.subtle)
         }
         .frame(maxWidth: .infinity)
         .glassCard(padding: 22)
@@ -161,7 +166,7 @@ struct EmptyCard: View {
 struct SmallLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
-    var body: some View { Text(text).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 4).padding(.top, 4) }
+    var body: some View { Text(text).font(.subheadline.weight(.semibold)).foregroundStyle(.subtle).padding(.leading, 4).padding(.top, 4) }
 }
 
 /// Testo lungo: tre righe, tutto con un tocco.
@@ -169,7 +174,7 @@ struct ExpandableText: View {
     let text: String
     @State private var expanded = false
     var body: some View {
-        Text(text).font(.subheadline).foregroundStyle(.secondary)
+        Text(text).font(.subheadline).foregroundStyle(.subtle)
             .lineLimit(expanded ? nil : 3)
             .onTapGesture { withAnimation(.snappy) { expanded.toggle() } }
     }
@@ -190,10 +195,10 @@ struct ItemRow: View {
         HStack(spacing: 14) {
             if let leading { leading }
             VStack(alignment: .leading, spacing: 3) {
-                if let o = overline?.ifBlank { Text(o).font(.caption).foregroundStyle(.secondary) }
+                if let o = overline?.ifBlank { Text(o).font(.caption).foregroundStyle(.subtle) }
                 Text(headline).font(.body.weight(bold ? .bold : .medium)).foregroundStyle(.primary)
                 if let s = supporting?.ifBlank { ExpandableText(text: s) }
-                if let f = footer?.ifBlank { Text(f).font(.caption).foregroundStyle(.secondary).padding(.top, 2) }
+                if let f = footer?.ifBlank { Text(f).font(.caption).foregroundStyle(.subtle).padding(.top, 2) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let trailing { trailing }
@@ -419,7 +424,7 @@ struct DayLabel: View {
         HStack {
             Text(longDate(Day.iso(day))).font(.headline)
             Spacer()
-            Label("scorri", systemImage: "hand.draw").font(.caption).foregroundStyle(.secondary)
+            Label("scorri", systemImage: "hand.draw").font(.caption).foregroundStyle(.subtle)
         }
         .padding(.horizontal, 4)
     }

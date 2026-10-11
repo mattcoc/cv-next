@@ -57,6 +57,7 @@ struct DebugRoot: View {
     var body: some View {
         switch screen {
         case "login": LoginView(onBack: nil) {}
+        case "loginAdd": LoginView(onBack: {}) {}
         case "settings": NavigationStack { SettingsView() }.environment(model)
         case "absences": NavigationStack { AbsencesView().navigationTitle("Assenze") }.environment(model)
         case "agenda": NavigationStack { AgendaView(filter: "Tutto").navigationTitle("Agenda") }.environment(model)
@@ -178,7 +179,7 @@ struct AccountSheet: View {
                         Avatar(name: model.name, size: 60)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.name.pretty).font(.title3.weight(.semibold))
-                            Text(model.api.uid).foregroundStyle(.secondary)
+                            Text(model.api.uid).foregroundStyle(.subtle)
                             if let s = model.school.data {
                                 Text([s.name, s.city].filter { !$0.isEmpty }.joined(separator: " · ")).font(.footnote).foregroundStyle(.tint)
                             }
@@ -197,7 +198,7 @@ struct AccountSheet: View {
                                 Avatar(name: a.name)
                                 VStack(alignment: .leading) {
                                     Text(a.name.pretty).foregroundStyle(.primary)
-                                    Text(active ? "In uso" : "Tocca per passare a questo account").font(.caption).foregroundStyle(.secondary)
+                                    Text(active ? "In uso" : "Tocca per passare a questo account").font(.caption).foregroundStyle(.subtle)
                                 }
                                 Spacer()
                                 if active { Image(systemName: "checkmark").foregroundStyle(.tint) }

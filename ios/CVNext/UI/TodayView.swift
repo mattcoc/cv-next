@@ -42,7 +42,7 @@ struct TodayView: View {
 
         VStack(alignment: .leading, spacing: 4) {
             Text("Ciao \(model.name.firstWord.pretty)").font(.largeTitle.weight(.bold))
-            Text(longDate(todayIso)).foregroundStyle(.secondary)
+            Text(longDate(todayIso)).foregroundStyle(.subtle)
             let cls = className(lessons.last { !$0.cls.isEmpty }?.cls ?? agenda.first { !$0.cls.isEmpty }?.cls ?? "")
             let info = [cls, model.school.data?.name ?? ""].filter { !$0.trimmed.isEmpty }.joined(separator: " · ")
             if !info.isEmpty {
@@ -59,7 +59,7 @@ struct TodayView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                     Text(pending == 1 ? "1 evento da giustificare" : "\(pending) eventi da giustificare").fontWeight(.semibold)
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right").foregroundStyle(.subtle)
                 }
                 .foregroundStyle(.primary)
                 .glassCard(.red, interactive: true)
@@ -76,7 +76,7 @@ struct TodayView: View {
                         Text("\(first.title) · € \(first.amount) entro il \(shortDate(first.due))").font(.caption).lineLimit(2)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right").foregroundStyle(.subtle)
                 }
                 .foregroundStyle(.primary)
                 .glassCard(.orange, interactive: true)
@@ -122,7 +122,7 @@ struct TodayView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 GradeCircle(grade: g)
                                 Text(g.subject).font(.subheadline.weight(.medium)).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
-                                Text(shortDate(g.date)).font(.caption).foregroundStyle(.secondary)
+                                Text(shortDate(g.date)).font(.caption).foregroundStyle(.subtle)
                             }
                             .foregroundStyle(.primary)
                             .frame(width: 104, alignment: .leading)
@@ -141,7 +141,7 @@ struct TodayView: View {
         NavigationLink(value: Page.agenda("Tutto")) {
             ItemRow(headline: "Agenda completa", supporting: "Compiti ed eventi dei prossimi 30 giorni e compiti passati", interactive: true,
                     leading: AnyView(IconBadge(icon: "calendar", color: .teal)),
-                    trailing: AnyView(Image(systemName: "chevron.right").foregroundStyle(.secondary)))
+                    trailing: AnyView(Image(systemName: "chevron.right").foregroundStyle(.subtle)))
         }
         .buttonStyle(.plain)
         .padding(.top, 10)

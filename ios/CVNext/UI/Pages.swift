@@ -187,7 +187,7 @@ struct DidacticsView: View {
                 Avatar(name: t.name, size: 40)
                 VStack(alignment: .leading) {
                     Text(t.name).font(.headline)
-                    Text(t.folders.count == 1 ? "1 cartella" : "\(t.folders.count) cartelle").font(.caption).foregroundStyle(.secondary)
+                    Text(t.folders.count == 1 ? "1 cartella" : "\(t.folders.count) cartelle").font(.caption).foregroundStyle(.subtle)
                 }
             }
             ForEach(Array(t.folders.enumerated()), id: \.offset) { i, f in
@@ -200,10 +200,10 @@ struct DidacticsView: View {
                         Image(systemName: "folder.fill").foregroundStyle(.tint)
                         VStack(alignment: .leading) {
                             Text(f.name.ifBlank ?? "Senza nome").fontWeight(.medium).lineLimit(2)
-                            Text("\(f.contents.count) elementi · \(shortDate(f.date))").font(.caption).foregroundStyle(.secondary)
+                            Text("\(f.contents.count) elementi · \(shortDate(f.date))").font(.caption).foregroundStyle(.subtle)
                         }
                         Spacer()
-                        Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0)).foregroundStyle(.secondary)
+                        Image(systemName: "chevron.down").rotationEffect(.degrees(open ? 180 : 0)).foregroundStyle(.subtle)
                     }
                     .foregroundStyle(.primary)
                     .contentShape(.rect)
@@ -258,7 +258,7 @@ struct DocumentsView: View {
             NavigationLink(value: Page.web("Esito scrutini", WebLinks.reports)) {
                 ItemRow(headline: "Esito scrutini", overline: "Dal sito web del registro", supporting: "Primo e secondo periodo, con voti ed esiti", interactive: true,
                         leading: AnyView(IconBadge(icon: "chart.bar.doc.horizontal", color: .indigo)),
-                        trailing: AnyView(Image(systemName: "chevron.right").foregroundStyle(.secondary)))
+                        trailing: AnyView(Image(systemName: "chevron.right").foregroundStyle(.subtle)))
             }
             .buttonStyle(.plain)
             Loaded(model.documents) {

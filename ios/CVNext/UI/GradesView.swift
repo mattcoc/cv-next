@@ -93,7 +93,7 @@ private struct PeriodCard: View {
                     Circle().fill(avg == nil ? Color.gray.opacity(0.4) : gradeColor(avg)).frame(width: 8, height: 8)
                     Text(avg.map(num) ?? "–").font(.title2.bold())
                 }
-                Text(count == 1 ? "1 voto" : "\(count) voti").font(.caption).foregroundStyle(.secondary)
+                Text(count == 1 ? "1 voto" : "\(count) voti").font(.caption).foregroundStyle(.subtle)
             }
             .foregroundStyle(.primary)
             .frame(width: 112, alignment: .leading)
@@ -147,13 +147,13 @@ private struct SubjectRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(subject).font(.headline).lineLimit(2).multilineTextAlignment(.leading)
-                    if avg == nil { Text("Nessun voto che fa media").font(.caption).foregroundStyle(.secondary) }
+                    if avg == nil { Text("Nessun voto che fa media").font(.caption).foregroundStyle(.subtle) }
                     else if let avg, avg < 6 { Text("Da recuperare").font(.caption.weight(.semibold)).foregroundStyle(.red) }
                 }
                 HStack(spacing: 6) { ForEach(Array(list.prefix(5).enumerated()), id: \.offset) { _, g in GradeChip(grade: g) } }
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            Image(systemName: "chevron.right").foregroundStyle(.subtle)
         }
         .foregroundStyle(.primary)
         .glassCard(interactive: true, padding: 16)
@@ -175,7 +175,7 @@ struct SubjectView: View {
                 AverageRing(avg: list.gradeAvg, size: 64)
                 VStack(alignment: .leading) {
                     Text("Media dell'anno").font(.headline)
-                    Text(list.count == 1 ? "1 voto" : "\(list.count) voti").foregroundStyle(.secondary)
+                    Text(list.count == 1 ? "1 voto" : "\(list.count) voti").foregroundStyle(.subtle)
                 }
             }
             .padding(.horizontal, 4)
@@ -219,7 +219,7 @@ private struct TargetCard: View {
                     ForEach([6, 7, 8, 9], id: \.self) { Text("Media \($0)").tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Text(text).font(.subheadline).foregroundStyle(.secondary).contentTransition(.opacity)
+                Text(text).font(.subheadline).foregroundStyle(.subtle).contentTransition(.opacity)
             }
             .glassCard(padding: 16)
         }
@@ -244,14 +244,14 @@ private struct TrendCard: View {
                 HStack {
                     Text("Andamento").font(.headline)
                     Spacer()
-                    Label("Voti", systemImage: "circle.fill").labelStyle(.titleAndIcon).font(.caption2).foregroundStyle(.secondary)
+                    Label("Voti", systemImage: "circle.fill").labelStyle(.titleAndIcon).font(.caption2).foregroundStyle(.subtle)
                     Label("Media", systemImage: "line.diagonal").font(.caption2).foregroundStyle(tint)
                 }
                 Text("\(g.value) · \(g.type.ifBlank ?? "Voto") · \(shortDate(g.date)) · media \(num(averages[picked]))").font(.subheadline)
                 Chart {
                     RuleMark(y: .value("Sufficienza", 6))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.subtle)
                     ForEach(points.indices, id: \.self) { i in
                         LineMark(x: .value("Voto", i), y: .value("Media", averages[i]))
                             .foregroundStyle(tint)
@@ -275,7 +275,7 @@ private struct TrendCard: View {
                     Text(shortDate(points[points.count - 1].date))
                 }
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.subtle)
             }
             .glassCard(padding: 16)
         }

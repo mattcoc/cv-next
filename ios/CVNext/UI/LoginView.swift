@@ -18,20 +18,19 @@ struct LoginView: View {
     private var canSubmit: Bool { !loading && !user.trimmed.isEmpty && !pass.isEmpty }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            AppBackground()
-            ScrollView {
+        ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Spacer(minLength: 80)
+                    Spacer(minLength: onBack != nil ? 64 : 48)
                     Text("CV Next").font(.system(size: 48, weight: .bold, design: .rounded)).foregroundStyle(tint)
                     Text(onBack != nil ? "Aggiungi un altro account" : "Accedi con le stesse credenziali del registro elettronico")
-                        .foregroundStyle(.secondary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.subtle)
                     Spacer(minLength: 12)
                     GlassEffectContainer(spacing: 12) {
                         VStack(spacing: 12) {
                             HStack {
-                                Image(systemName: "person").foregroundStyle(.secondary).frame(width: 24)
-                                TextField("Codice utente o email", text: $user)
+                                Image(systemName: "person").foregroundStyle(.subtle).frame(width: 24)
+                                TextField("Codice utente o email", text: $user, prompt: Text("Codice utente o email").foregroundStyle(.subtle))
                                     .textContentType(.username)
                                     .keyboardType(.emailAddress)
                                     .textInputAutocapitalization(.never)
@@ -44,9 +43,9 @@ struct LoginView: View {
                             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18))
 
                             HStack {
-                                Image(systemName: "key").foregroundStyle(.secondary).frame(width: 24)
+                                Image(systemName: "key").foregroundStyle(.subtle).frame(width: 24)
                                 Group {
-                                    if show { TextField("Password", text: $pass) } else { SecureField("Password", text: $pass) }
+                                    if show { TextField("Password", text: $pass, prompt: Text("Password").foregroundStyle(.subtle)) } else { SecureField("Password", text: $pass, prompt: Text("Password").foregroundStyle(.subtle)) }
                                 }
                                 .textContentType(.password)
                                 .textInputAutocapitalization(.never)
@@ -55,7 +54,7 @@ struct LoginView: View {
                                 .focused($focus, equals: .pass)
                                 .onSubmit(submit)
                                 Button { show.toggle() } label: { Image(systemName: show ? "eye.slash" : "eye") }
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.subtle)
                                     .accessibilityLabel(show ? "Nascondi password" : "Mostra password")
                             }
                             .padding(16)
@@ -75,26 +74,31 @@ struct LoginView: View {
                     }
                     .buttonStyle(.glassProminent)
                     .controlSize(.large)
-                    .disabled(!canSubmit)
+                    // Resta colorato anche quando i campi sono vuoti: grigio era poco leggibile.
+                    .opacity(canSubmit || loading ? 1 : 0.6)
+                    .allowsHitTesting(canSubmit)
 
                     VStack(spacing: 6) {
                         Label("Le credenziali restano cifrate solo sul tuo telefono", systemImage: "lock.fill")
                         Text("App non ufficiale. Non affiliata a Gruppo Spaggiari Parma S.p.A.").multilineTextAlignment(.center)
                     }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(.subtle)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
                 }
                 .padding(24)
             }
-            .scrollDismissesKeyboard(.interactively)
-
+        .scrollDismissesKeyboard(.interactively)
+        // Lo sfondo va dietro e non in uno ZStack: le sue macchie sono più larghe di un iPhone piccolo e allargherebbero tutto.
+        .background { AppBackground() }
+        .overlay(alignment: .topLeading) {
             if let onBack {
-                Button(action: onBack) { Image(systemName: "chevron.left").font(.title3.weight(.semibold)).frame(width: 44, height: 44) }
+                Button(action: onBack) { Image(systemName: "chevron.left").font(.title3.weight(.semibold)).frame(width: 32, height: 32) }
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
                     .padding(.leading, 16)
+                    .padding(.top, 4)
                     .accessibilityLabel("Indietro")
             }
         }

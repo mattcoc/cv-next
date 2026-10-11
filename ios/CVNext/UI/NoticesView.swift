@@ -46,7 +46,7 @@ private struct NoticeRow: View {
                 } else if count == 1 {
                     Image(systemName: "doc.richtext").foregroundStyle(tint)
                 } else {
-                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right").foregroundStyle(.subtle)
                 }
             })
         )
@@ -67,7 +67,7 @@ struct NoticeView: View {
         Screen {
             VStack(alignment: .leading, spacing: 6) {
                 Text(notice.title).font(.title2.weight(.bold))
-                Text([longDate(notice.date), notice.category].filter { !$0.trimmed.isEmpty }.joined(separator: " · ")).foregroundStyle(.secondary)
+                Text([longDate(notice.date), notice.category].filter { !$0.trimmed.isEmpty }.joined(separator: " · ")).foregroundStyle(.subtle)
             }
             .padding(.horizontal, 4)
             .padding(.bottom, 6)
@@ -87,7 +87,7 @@ struct NoticeView: View {
                         ItemRow(headline: a.name.ifBlank ?? "Allegato \(a.num)", supporting: "PDF", interactive: true,
                                 leading: AnyView(IconBadge(icon: "doc.richtext", color: .red)),
                                 trailing: AnyView(Group {
-                                    if opening == a.num { ProgressView() } else { Image(systemName: "arrow.down.circle").foregroundStyle(.secondary) }
+                                    if opening == a.num { ProgressView() } else { Image(systemName: "arrow.down.circle").foregroundStyle(.subtle) }
                                 }))
                     }
                     .buttonStyle(.plain)

@@ -59,7 +59,7 @@ struct SettingsView: View {
                         if on { s.insert(a) } else { s.remove(a) }
                         setAlerts(s)
                     })) {
-                        Label { VStack(alignment: .leading) { Text(a.title); Text(a.detail).font(.caption).foregroundStyle(.secondary) } } icon: { Image(systemName: a.icon) }
+                        Label { VStack(alignment: .leading) { Text(a.title); Text(a.detail).font(.caption).foregroundStyle(.subtle) } } icon: { Image(systemName: a.icon) }
                     }
                 }
                 Button {
@@ -85,7 +85,7 @@ struct SettingsView: View {
                         await Evening.reschedule()
                     }
                 })) {
-                    Label { VStack(alignment: .leading) { Text("Promemoria della sera"); Text("Compiti, verifiche e promemoria del giorno dopo").font(.caption).foregroundStyle(.secondary) } } icon: { Image(systemName: "moon.stars") }
+                    Label { VStack(alignment: .leading) { Text("Promemoria della sera"); Text("Compiti, verifiche e promemoria del giorno dopo").font(.caption).foregroundStyle(.subtle) } } icon: { Image(systemName: "moon.stars") }
                 }
                 if evening {
                     Picker("Ora", selection: Binding(get: { eveningHour }, set: { h in eveningHour = h; Task { await Evening.reschedule() } })) {

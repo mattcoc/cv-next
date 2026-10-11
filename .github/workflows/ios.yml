@@ -8,7 +8,7 @@ on:
     inputs:
       screens:
         description: 'Schermate da fotografare, separate da spazio'
-        default: 'today grades subject agenda notices functions absences settings login'
+        default: 'today grades subject agenda notices functions absences settings login loginAdd'
 
 permissions:
   contents: write
@@ -52,6 +52,7 @@ jobs:
           cd ios
           xcodebuild -project CVNext.xcodeproj -scheme CVNext -configuration Release \
             -destination "generic/platform=iOS" -derivedDataPath build \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build -quiet
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/CVNext.app Payload/
@@ -81,7 +82,7 @@ jobs:
           mkdir -p shots
           for mode in light dark; do
             xcrun simctl ui "$UDID" appearance $mode
-            for screen in ${{ github.event.inputs.screens || 'today grades subject agenda notices functions absences settings login' }}; do
+            for screen in ${{ github.event.inputs.screens || 'today grades subject agenda notices functions absences settings login loginAdd' }}; do
               xcrun simctl terminate "$UDID" io.github.mattcoc.cvnext 2>/dev/null || true
               xcrun simctl launch "$UDID" io.github.mattcoc.cvnext -debugScreen $screen
               sleep 6

@@ -1,6 +1,10 @@
 package com.example.classevivamodernaemeglio
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -78,14 +82,28 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
         item {
             val (cardBg, cardFg) = averageCardColors(avg)
             Card(Modifier.appear(1), colors = CardDefaults.cardColors(containerColor = cardBg, contentColor = cardFg)) {
-                Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(if (period == YEAR) "Media dell'anno" else "Media · ${name(period)}", style = MaterialTheme.typography.titleMedium)
-                        val v = animatedValue(avg)
-                        Text(if (avg == null) "–" else num(v.toDouble()), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
-                        Text("${grades.size} voti · ${subjects.size} materie", style = MaterialTheme.typography.labelLarge)
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(if (period == YEAR) "Media dell'anno" else "Media · ${name(period)}", style = MaterialTheme.typography.titleMedium)
+                            val v = animatedValue(avg)
+                            Text(if (avg == null) "–" else num(v.toDouble()), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                            Text("${grades.size} voti · ${subjects.size} materie", style = MaterialTheme.typography.labelLarge)
+                        }
+                        AverageRing(avg, 72.dp, label = false)
                     }
-                    AverageRing(avg, 72.dp)
+                    val averages = subjects.mapValues { it.value.gradeAvg() }.filterValues { it != null }
+                    val low = averages.filterValues { it!! < 6 }.keys.toList()
+                    if (averages.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "${averages.size - low.size} su ${averages.size} materie sufficienti",
+                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium
+                        )
+                        if (low.isNotEmpty()) Text(
+                            "Da recuperare: " + low.joinToString(", "),
+                            style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -103,7 +121,21 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
                     AverageRing(list.gradeAvg())
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Column {
+                            Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            val subjectAvg = list.gradeAvg()
+                            val note = when {
+                                subjectAvg == null -> "Nessun voto che fa media"
+                                subjectAvg < 6 -> "Da recuperare"
+                                else -> null
+                            }
+                            note?.let {
+                                Text(
+                                    it, style = MaterialTheme.typography.labelMedium,
+                                    color = if (subjectAvg == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { list.take(5).forEach { GradeChip(it) } }
                     }
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -126,7 +158,10 @@ fun PeriodCard(name: String, avg: Double?, count: Int, selected: Boolean, modifi
         border = if (selected) BorderStroke(2.dp, c.primary) else null
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicText(
+                name, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, color = LocalContentColor.current),
+                maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = MaterialTheme.typography.labelLarge.fontSize)
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.padding(end = 6.dp).size(8.dp).clip(CircleShape).background(if (avg == null) c.outlineVariant else tone))
                 Text(avg?.let(::num) ?: "–", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)

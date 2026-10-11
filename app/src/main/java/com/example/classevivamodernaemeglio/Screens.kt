@@ -229,7 +229,7 @@ fun GradeChip(g: Grade) {
 }
 
 @Composable
-fun AverageRing(avg: Double?, size: Dp = 56.dp) = Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+fun AverageRing(avg: Double?, size: Dp = 56.dp, label: Boolean = true) = Box(Modifier.size(size), contentAlignment = Alignment.Center) {
     val (color, _) = gradeColors(avg)
     val v = animatedValue(avg)
     CircularProgressIndicator(
@@ -240,7 +240,7 @@ fun AverageRing(avg: Double?, size: Dp = 56.dp) = Box(Modifier.size(size), conte
         strokeWidth = 5.dp,
         strokeCap = StrokeCap.Round
     )
-    Text(if (avg == null) "–" else num(v.toDouble()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+    if (label) Text(if (avg == null) "–" else num(v.toDouble()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
 }
 
 @Composable

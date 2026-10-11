@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 /** Dati di esempio usati solo dagli screenshot automatici della versione di sviluppo. */
 object DebugData {
-    private val today = LocalDate.now()
+    private val today = LocalDate.now().let { if (it.dayOfWeek == java.time.DayOfWeek.SUNDAY) it.plusDays(1) else it }
     private fun day(offset: Long) = today.plusDays(offset).toString()
 
     val periods = listOf(

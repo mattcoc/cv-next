@@ -256,8 +256,8 @@ fun absenceStyle(type: String): Triple<String, Color, Color> {
     val c = MaterialTheme.colorScheme
     return when (type) {
         "Assenza" -> Triple("A", c.errorContainer, c.onErrorContainer)
-        "Assenza parziale" -> Triple("P", c.primaryContainer, c.onPrimaryContainer)
-        "Uscita anticipata" -> Triple("U", c.secondaryContainer, c.onSecondaryContainer)
+        "Assenza parziale" -> Triple("P", c.secondaryContainer, c.onSecondaryContainer)
+        "Uscita anticipata" -> Triple("U", c.surfaceContainerHighest, c.onSurfaceVariant)
         else -> Triple("R", c.tertiaryContainer, c.onTertiaryContainer)
     }
 }

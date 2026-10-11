@@ -10,11 +10,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.classevivamodernaemeglio"
+        applicationId = "io.github.mattcoc.cvnext"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,7 +43,6 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.material.kolor)
     implementation(libs.androidx.work)

@@ -43,7 +43,7 @@ suspend fun Api.grades() = get("/grades").list("grades").map {
 suspend fun Api.agenda(): List<Event> {
     val f = DateTimeFormatter.BASIC_ISO_DATE
     val today = LocalDate.now()
-    return get("/agenda/all/${today.format(f)}/${today.plusDays(30).format(f)}").list("agenda").map {
+    return get("/agenda/all/${today.minusDays(30).format(f)}/${today.plusDays(30).format(f)}").list("agenda").map {
         val begin = it.str("evtDatetimeBegin")
         Event(
             begin.take(10), if (it.optBoolean("isFullDay")) "" else begin.drop(11).take(5),
@@ -117,7 +117,7 @@ fun className(raw: String) = raw.substringBefore(' ').substringBefore('(').trim(
 data class Payment(val id: String, val title: String, val amount: String, val due: String)
 
 suspend fun Api.payments(): List<Payment> {
-    val raw = webPage("https://web.spaggiari.eu/rest/w1/parents/${studentId()}/pagoonline/payments/?")
+    val raw = webPage(Endpoints.payments(studentId()))
     val json = runCatching { JSONObject(raw) }.getOrNull()
         ?: throw ApiException("Impossibile accedere ai pagamenti online (sessione web scaduta)")
     val today = LocalDate.now().toString()
@@ -163,6 +163,29 @@ fun List<Double>.avg() = if (isEmpty()) null else average()
 fun List<Grade>.gradeAvg() = filter { it.counts }.mapNotNull { it.decimal }.avg()
 fun List<Grade>.subjectsAvg() = groupBy { it.subject }.values.mapNotNull { it.gradeAvg() }.avg()
 fun num(x: Double) = String.format(ita, "%.2f", x)
+
+/** Cosa serve per portare la media dei voti [values] almeno a [target]. */
+sealed interface Needed {
+    data object Reached : Needed
+    data class One(val grade: Double) : Needed
+    data class Two(val grade: Double) : Needed
+    data object Impossible : Needed
+}
+
+private fun quarterUp(x: Double) = Math.ceil(x * 4 - 1e-9) / 4
+
+/** Il voto minimo al prossimo compito per non scendere sotto [target]. */
+fun keepGrade(values: List<Double>, target: Double) = quarterUp(target * (values.size + 1) - values.sum()).coerceIn(1.0, 10.0)
+
+fun neededGrade(values: List<Double>, target: Double): Needed {
+    val sum = values.sum()
+    if (values.isNotEmpty() && sum / values.size >= target) return Needed.Reached
+    fun round(x: Double) = quarterUp(x)
+    val one = round(target * (values.size + 1) - sum)
+    if (one <= 10) return Needed.One(one.coerceAtLeast(1.0))
+    val two = round((target * (values.size + 2) - sum) / 2)
+    return if (two <= 10) Needed.Two(two) else Needed.Impossible
+}
 
 data class NoteItem(val type: String, val date: String, val author: String, val text: String, val read: Boolean, val id: Long = 0)
 

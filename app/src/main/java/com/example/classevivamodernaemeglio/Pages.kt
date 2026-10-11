@@ -105,7 +105,7 @@ sealed interface Page {
     data object Lessons : Page
 }
 
-const val WEB = "https://web.spaggiari.eu"
+const val WEB = Endpoints.WEB
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -413,5 +413,5 @@ object WebLinks {
     const val payments = "$WEB/pfo/app/default/scadenze.php"
     const val reports = "$WEB/sol/app/default/documenti_sol.php?quad=1"
     const val projects = "$WEB/pdp/app/default/lista_pfi_studente.php"
-    const val lastYear = "$WEB/home/app/default/xasapi.php?a=lap&bu=https://web25.spaggiari.eu&ru=/home/&fu=xasapi-ERROR.php"
+    val lastYear get() = "$WEB/home/app/default/xasapi.php?a=lap&bu=${Endpoints.lastYearHost()}&ru=/home/&fu=xasapi-ERROR.php"
 }

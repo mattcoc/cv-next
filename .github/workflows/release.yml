@@ -29,6 +29,8 @@ jobs:
           echo "Versione: v$NUM"
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -40,8 +42,25 @@ jobs:
       - name: Compila APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk "cv-next-$VERSION.apk"
+          ./gradlew testReleaseUnitTest assembleRelease --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "cv-next-$VERSION.apk"
+
+      - name: Note di versione
+        run: |
+          PREV=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          {
+            echo "## Novità"
+            echo
+            if [ -n "$PREV" ]; then
+              git log "$PREV..HEAD" --no-merges --format='- %s' -- app
+            else
+              git log --no-merges --format='- %s' -- app
+            fi
+            echo
+            echo "Scarica \`cv-next-$VERSION.apk\`, aprilo sul telefono e consenti l'installazione da origini sconosciute. Serve Android 8.0 o superiore."
+            echo "Se hai già CV Next, puoi aggiornare direttamente dall'app: Impostazioni → Aggiornamenti."
+          } > notes.md
+          cat notes.md
 
       - name: Firma con la chiave del progetto
         env:
@@ -67,7 +86,4 @@ jobs:
           name: CV Next ${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           files: cv-next-${{ env.VERSION }}.apk
-          body: |
-            APK di CV Next ${{ env.VERSION }}.
-
-            Scarica `cv-next-${{ env.VERSION }}.apk`, aprilo sul telefono e consenti l'installazione da origini sconosciute. Serve Android 8.0 o superiore.
+          body_path: notes.md

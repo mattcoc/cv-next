@@ -152,6 +152,7 @@ fun SubjectSheet(subject: String, list: List<Grade>, periods: List<Period>, onDi
                     }
                 }
             }
+            item { Box(Modifier.appear(1)) { TargetCard(list, periods) } }
             if (groups.size > 1) item {
                 Row(Modifier.horizontalScroll(rememberScrollState()).appear(1), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     groups.forEach { (pos, g) ->
@@ -176,6 +177,29 @@ fun SubjectSheet(subject: String, list: List<Grade>, periods: List<Period>, onDi
                 }
                 animItems(g, "d-$pos", i + 3) { Item(it.type.ifBlank { "Voto" }, longDate(it.date), it.notes, expandable = true, leading = { GradeCircle(it) }) }
             }
+        }
+    }
+}
+
+/** "Quanto devo prendere?": il voto che serve nel periodo in corso per arrivare alla media scelta. */
+@Composable
+fun TargetCard(list: List<Grade>, periods: List<Period>) {
+    val c = MaterialTheme.colorScheme
+    val pos = periods.firstOrNull { it.current }?.pos ?: list.maxOfOrNull { it.periodPos } ?: return
+    val values = list.filter { it.periodPos == pos && it.counts }.mapNotNull { it.decimal }
+    val periodName = periods.firstOrNull { it.pos == pos }?.name ?: list.firstOrNull { it.periodPos == pos }?.period?.pretty().orEmpty()
+    var target by rememberSaveable { mutableIntStateOf(6) }
+    Card(colors = CardDefaults.cardColors(containerColor = c.surfaceContainerHigh)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Quanto devo prendere?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            ChipRow(listOf(6, 7, 8, 9), target, { "Media $it" }) { target = it }
+            val text = when (val n = neededGrade(values, target.toDouble())) {
+                Needed.Reached -> "Hai già almeno $target di media${if (periodName.isNotBlank()) " nel $periodName" else ""}. Per restarci, al prossimo voto basta un ${num(keepGrade(values, target.toDouble()))}."
+                is Needed.One -> "Al prossimo voto ti serve almeno ${num(n.grade)} per arrivare a $target."
+                is Needed.Two -> "Con un solo voto non basta: servono due voti da almeno ${num(n.grade)}."
+                Needed.Impossible -> "Per arrivare a $target servono più di due voti alti."
+            }
+            Text(text, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

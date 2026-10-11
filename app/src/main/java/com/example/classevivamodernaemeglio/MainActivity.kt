@@ -20,6 +20,12 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -109,6 +115,7 @@ import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
     private val target = mutableStateOf<String?>(null)
+    private val targetAccount = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,11 +125,13 @@ class MainActivity : ComponentActivity() {
         Notifier.channels(this)
         Notifier.schedule(this, settings.alerts)
         target.value = intent?.getStringExtra("section")
-        setContent { AppTheme(settings) { Surface(Modifier.fillMaxSize()) { App(api, settings, target) } } }
+        targetAccount.value = intent?.getStringExtra("account")
+        setContent { AppTheme(settings) { Surface(Modifier.fillMaxSize()) { App(api, settings, target, targetAccount) } } }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        targetAccount.value = intent.getStringExtra("account")
         target.value = intent.getStringExtra("section")
     }
 }
@@ -159,9 +168,18 @@ fun AppTheme(settings: Settings, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun App(api: Api, settings: Settings, target: MutableState<String?>) {
+fun App(api: Api, settings: Settings, target: MutableState<String?>, targetAccount: MutableState<String?>) {
     var current by remember { mutableStateOf(api.current) }
     var adding by remember { mutableStateOf(false) }
+    LaunchedEffect(targetAccount.value) {
+        targetAccount.value?.let { key ->
+            if (key != current && api.accounts.any { it.key == key }) {
+                api.switchTo(key)
+                current = key
+            }
+        }
+        targetAccount.value = null
+    }
     val screen = if (current == null || adding) "login" else current!!
     AnimatedContent(
         screen,
@@ -190,22 +208,49 @@ fun Login(api: Api, onBack: (() -> Unit)?, onDone: () -> Unit) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    var choices by remember { mutableStateOf<List<Student>?>(null) }
     val canSubmit = !loading && user.isNotBlank() && pass.isNotEmpty()
     onBack?.let { BackHandler(onBack = it) }
-    val submit: () -> Unit = {
-        if (canSubmit) scope.launch {
+    val login: (Student?) -> Unit = { student ->
+        scope.launch {
             loading = true
             error = null
             try {
-                api.login(user, pass)
+                api.login(user, pass, student)
                 onDone()
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: ChoiceNeeded) {
+                choices = e.choices
             } catch (e: Exception) {
                 error = e.text()
             }
             loading = false
         }
+    }
+    val submit: () -> Unit = { if (canSubmit) login(null) }
+    choices?.let { list ->
+        AlertDialog(
+            onDismissRequest = { choices = null },
+            confirmButton = {},
+            dismissButton = { TextButton({ choices = null }) { Text("Annulla") } },
+            title = { Text("Scegli lo studente") },
+            text = {
+                Column {
+                    Text("Al tuo account sono collegati più studenti. Puoi aggiungere gli altri dopo, con \"Aggiungi account\".", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    list.forEach { st ->
+                        ListItem(
+                            headlineContent = { Text(st.name.ifBlank { st.ident }) },
+                            supportingContent = st.school.takeIf { it.isNotBlank() }?.let { { Text(it) } },
+                            leadingContent = { Avatar(st.name.ifBlank { st.ident }) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { choices = null; login(st) }
+                        )
+                    }
+                }
+            }
+        )
     }
     Box(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
         onBack?.let { IconButton(it, Modifier.padding(8.dp)) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Indietro") } }
@@ -263,6 +308,12 @@ class Res<T>(private val load: suspend () -> T) {
     suspend fun refresh() {
         loading = true
         error = null
+        if (data == null) try {
+            data = withContext(CacheOnly) { load() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        }
         try {
             data = load()
         } catch (e: CancellationException) {
@@ -305,6 +356,9 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     val school = remember { Res { api.school() } }
     val payments = remember { Res { api.payments() } }
     LaunchedEffect(Unit) { listOf(lessons, grades, agenda, absences, notices, periods, school, payments).forEach { launch { it.refresh() } } }
+    val context = LocalContext.current
+    var update by remember { mutableStateOf<Release?>(null) }
+    LaunchedEffect(Unit) { update = Updater.dailyCheck(context) }
     LaunchedEffect(target.value) {
         target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
         target.value = null
@@ -342,7 +396,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                         Section.Oggi -> Refreshable(lessons, grades, agenda, absences) {
                             TodayScreen(
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
-                                { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) }
+                                { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
+                                update, { settingsOpen = true }, { update = null }
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
@@ -401,7 +456,7 @@ fun AccountSheet(api: Api, school: School?, onDismiss: () -> Unit, onSwitch: (St
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.appear(1)) {
                     Text(api.name.pretty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text(api.current.orEmpty(), color = c.onSurfaceVariant)
+                    Text(api.uid, color = c.onSurfaceVariant)
                     school?.let {
                         Text(listOf(it.name, it.city).filter(String::isNotBlank).joinToString(" · "), style = MaterialTheme.typography.labelLarge, color = c.primary)
                     }
@@ -410,14 +465,14 @@ fun AccountSheet(api: Api, school: School?, onDismiss: () -> Unit, onSwitch: (St
             HorizontalDivider(Modifier.padding(horizontal = 24.dp))
             Text("Account", Modifier.padding(24.dp, 16.dp, 24.dp, 4.dp), style = MaterialTheme.typography.titleSmall, color = c.primary)
             api.accounts.forEachIndexed { i, a ->
-                val active = a.uid == api.current
+                val active = a.key == api.current
                 ListItem(
                     headlineContent = { Text(a.name.pretty()) },
                     supportingContent = { Text(if (active) "In uso" else "Tocca per passare a questo account") },
                     leadingContent = { Avatar(a.name) },
                     trailingContent = if (active) { { Icon(Icons.Rounded.Check, null, tint = c.primary) } } else null,
                     colors = clear,
-                    modifier = Modifier.appear(i + 2).clickable(enabled = !active) { onSwitch(a.uid) }.padding(horizontal = 8.dp)
+                    modifier = Modifier.appear(i + 2).clickable(enabled = !active) { onSwitch(a.key) }.padding(horizontal = 8.dp)
                 )
             }
             ListItem(
@@ -446,11 +501,30 @@ fun Refreshable(vararg res: Res<*>, content: @Composable () -> Unit) {
     PullToRefreshBox(ready && res.any { it.loading }, retry, Modifier.fillMaxSize()) {
         val error = res.firstNotNullOfOrNull { it.error }
         when {
+            ready && error != null -> Column(Modifier.fillMaxSize()) {
+                OfflineBanner(error, retry)
+                Box(Modifier.weight(1f)) { content() }
+            }
             ready -> content()
             error != null -> Message(error, retry)
             else -> LoadingState()
         }
     }
+}
+
+@Composable
+fun OfflineBanner(error: String, retry: () -> Unit) = Row(
+    Modifier.fillMaxWidth().padding(16.dp, 4.dp, 16.dp, 4.dp).clip(MaterialTheme.shapes.medium)
+        .background(MaterialTheme.colorScheme.secondaryContainer).clickable(onClick = retry).padding(14.dp, 10.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Icon(Icons.Rounded.CloudOff, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+    Spacer(Modifier.width(10.dp))
+    Column(Modifier.weight(1f)) {
+        Text("Dati dell'ultimo aggiornamento", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
+    Text("Riprova", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 }
 
 @Composable

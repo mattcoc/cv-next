@@ -42,16 +42,15 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 
-data class Release(val version: String, val apkUrl: String, val size: Long)
+data class Release(val version: String, val apkUrl: String, val size: Long, val notes: String = "")
 
 object Updater {
-    private const val LATEST = "https://api.github.com/repos/mattcoc/cv-next/releases/latest"
 
     fun installed(context: Context): String =
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
 
     suspend fun latest(): Release = withContext(Dispatchers.IO) {
-        val c = URI(LATEST).toURL().openConnection() as HttpURLConnection
+        val c = URI(Endpoints.RELEASES).toURL().openConnection() as HttpURLConnection
         c.setRequestProperty("Accept", "application/vnd.github+json")
         val code = c.responseCode
         val body = (if (code < 400) c.inputStream else c.errorStream)?.use { String(it.readBytes()) }.orEmpty()
@@ -61,7 +60,28 @@ object Updater {
         val assets = json.optJSONArray("assets")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
         val apk = assets.firstOrNull { it.optString("name").endsWith(".apk", true) }
             ?: throw ApiException("L'ultima versione non contiene un APK")
-        Release(json.optString("tag_name").removePrefix("v"), apk.getString("browser_download_url"), apk.optLong("size"))
+        Release(
+            json.optString("tag_name").removePrefix("v"), apk.getString("browser_download_url"), apk.optLong("size"),
+            json.optString("body").trim()
+        )
+    }
+
+    /** Controllo automatico all'avvio, al massimo una volta al giorno. Restituisce la versione nuova se c'è. */
+    suspend fun dailyCheck(context: Context): Release? {
+        val prefs = context.getSharedPreferences("updates", Context.MODE_PRIVATE)
+        val installed = installed(context)
+        val saved = prefs.getString("release", null)?.let {
+            runCatching { JSONObject(it).let { j -> Release(j.getString("v"), j.getString("u"), j.optLong("s"), j.optString("n")) } }.getOrNull()
+        }
+        if (System.currentTimeMillis() - prefs.getLong("checked", 0) < 24 * 3600 * 1000L) {
+            return saved?.takeIf { isNewer(it.version, installed) }
+        }
+        val r = runCatching { latest() }.getOrNull() ?: return saved?.takeIf { isNewer(it.version, installed) }
+        prefs.edit()
+            .putLong("checked", System.currentTimeMillis())
+            .putString("release", JSONObject().put("v", r.version).put("u", r.apkUrl).put("s", r.size).put("n", r.notes).toString())
+            .apply()
+        return r.takeIf { isNewer(it.version, installed) }
     }
 
     fun isNewer(remote: String, local: String): Boolean {
@@ -182,6 +202,10 @@ fun UpdateCard(modifier: Modifier = Modifier) {
                         color = if (state is UpdateState.Failed) c.error else c.onSurfaceVariant
                     )
                 }
+            }
+            (state as? UpdateState.Available)?.release?.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+                Text("Novità", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                ExpandableText(notes.replace(Regex("(?m)^#+\\s*"), "").replace("**", ""), lines = 6)
             }
             when (val s = state) {
                 is UpdateState.Downloading -> LinearProgressIndicator({ s.progress }, Modifier.fillMaxWidth())

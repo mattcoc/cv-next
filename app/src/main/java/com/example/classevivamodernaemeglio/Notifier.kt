@@ -34,7 +34,7 @@ object Notifier {
     fun schedule(context: Context, enabled: Set<Alert>) {
         runCatching {
             val wm = WorkManager.getInstance(context)
-            if (enabled.isEmpty()) {
+            if (enabled.isEmpty() && !HomeworkWidget.hasWidgets(context)) {
                 wm.cancelUniqueWork("check")
                 return
             }
@@ -59,11 +59,14 @@ object Notifier {
         }
     }
 
-    fun post(context: Context, alert: Alert, id: String, text: String) {
+    fun post(context: Context, alert: Alert, account: String, id: String, text: String) {
         runCatching {
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
-            val intent = Intent(context, MainActivity::class.java).putExtra("section", alert.section).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            val pending = PendingIntent.getActivity(context, alert.ordinal, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val intent = Intent(context, MainActivity::class.java)
+                .putExtra("section", alert.section)
+                .putExtra("account", account)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            val pending = PendingIntent.getActivity(context, "${alert.name}-$account".hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val notification = NotificationCompat.Builder(context, alert.name)
                 .setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(alert.single)
@@ -71,9 +74,9 @@ object Notifier {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(pending)
                 .setAutoCancel(true)
-                .setGroup(alert.name)
+                .setGroup("${alert.name}-$account")
                 .build()
-            NotificationManagerCompat.from(context).notify("${alert.name}-$id".hashCode(), notification)
+            NotificationManagerCompat.from(context).notify("${alert.name}-$account-$id".hashCode(), notification)
         }
     }
 }
@@ -81,19 +84,26 @@ object Notifier {
 class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val settings = Settings(applicationContext)
-        val api = Api(applicationContext)
-        val uid = api.current ?: return Result.success()
+        val accounts = Api(applicationContext).accounts
         val prefs = applicationContext.getSharedPreferences("seen", Context.MODE_PRIVATE)
         Notifier.channels(applicationContext)
-        settings.alerts.forEach { alert ->
-            runCatching {
-                val items = fetch(api, alert)
-                val key = "${alert.name}-$uid"
-                val seen = prefs.getStringSet(key, null)
-                if (seen != null) items.filter { it.first !in seen }.take(5).forEach { Notifier.post(applicationContext, alert, it.first, it.second) }
-                prefs.edit().putStringSet(key, (seen.orEmpty() + items.map { it.first }).toSet()).apply()
+        accounts.forEach { account ->
+            val api = Api(applicationContext, account.key)
+            val who = if (accounts.size > 1) "${account.name.substringBefore(' ').pretty()} · " else ""
+            settings.alerts.forEach { alert ->
+                runCatching {
+                    val items = fetch(api, alert)
+                    val key = "${alert.name}-${account.key}"
+                    val seen = prefs.getStringSet(key, null)
+                    if (seen != null) items.filter { it.first !in seen }.take(5).forEach {
+                        Notifier.post(applicationContext, alert, account.key, it.first, who + it.second)
+                    }
+                    // Tiene solo gli id ancora presenti, così l'elenco non cresce all'infinito.
+                    prefs.edit().putStringSet(key, items.map { it.first }.toSet()).apply()
+                }
             }
         }
+        runCatching { HomeworkWidget.refresh(applicationContext) }
         return Result.success()
     }
 

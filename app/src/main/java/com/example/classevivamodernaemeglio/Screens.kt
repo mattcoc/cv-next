@@ -1,5 +1,8 @@
 package com.example.classevivamodernaemeglio
 
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.IconButton
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -305,7 +308,8 @@ fun EventItem(e: Event, showDate: Boolean = false) {
 @Composable
 fun TodayScreen(
     name: String, school: School?, lessons: List<Lesson>, grades: List<Grade>, agenda: List<Event>, absences: List<Absence>,
-    payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit, onAbsences: () -> Unit
+    payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit,
+    update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit, onAbsences: () -> Unit
 ) {
     val today = remember { LocalDate.now() }
     val days = remember { (14L downTo 0L).map { today.minusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
@@ -323,6 +327,21 @@ fun TodayScreen(
                     Icon(Icons.Rounded.School, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
                     Text(info, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        update?.let { r ->
+            item {
+                Card(onUpdate, Modifier.fillMaxWidth().appear(1), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Row(Modifier.padding(16.dp, 8.dp, 4.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.SystemUpdate, null)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Nuova versione ${r.version}", fontWeight = FontWeight.SemiBold)
+                            Text("Tocca per aggiornare l'app", style = MaterialTheme.typography.bodySmall)
+                        }
+                        IconButton(onDismissUpdate) { Icon(Icons.Rounded.Close, "Ignora") }
+                    }
                 }
             }
         }
@@ -387,18 +406,20 @@ fun TodayScreen(
             }
         }
         item { Box(Modifier.appear(7)) { Header("In arrivo", "Agenda") { open(Section.Agenda) } } }
-        if (agenda.isEmpty()) item { Empty("Niente in programma") }
-        animItems(agenda.take(4), "agenda", 8) { EventItem(it, showDate = true) }
+        val upcoming = agenda.filter { it.date >= today.toString() }
+        if (upcoming.isEmpty()) item { Empty("Niente in programma") }
+        animItems(upcoming.take(4), "agenda", 8) { EventItem(it, showDate = true) }
     }
 }
 
 @Composable
 fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit) {
     val today = remember { LocalDate.now() }
-    val days = remember { (0L..30L).map { today.plusDays(it) } }
+    val days = remember { (-30L..30L).map { today.plusDays(it) } }
     var selected by rememberSaveable { mutableStateOf(today.toString()) }
     val byDay = remember(events) { events.groupBy { it.date } }
-    val homework = events.filter { it.homework }
+    val homework = events.filter { it.homework && it.date >= today.toString() }
+    val pastHomework = events.filter { it.homework && it.date < today.toString() }.sortedByDescending { it.date }
     val filters = listOf("Tutto", "Compiti")
     Screen {
         item {
@@ -418,7 +439,7 @@ fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit
                     }
                 }
             }
-            val next = events.filter { it.date > selected }
+            val next = events.filter { it.date > selected && it.date > today.toString() }
             if (next.isNotEmpty()) item { Box(Modifier.appear(3)) { Header("Prossimi giorni") } }
             animItems(next, "next-$selected", 4) { EventItem(it, showDate = true) }
         } else {
@@ -426,6 +447,10 @@ fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit
             homework.groupBy { it.date }.entries.forEachIndexed { i, (date, l) ->
                 item("h-$filter-$date") { Box(Modifier.appear(i + 1)) { Header(longDate(date)) } }
                 animItems(l, "f-$filter-$date", i + 2) { EventItem(it) }
+            }
+            if (pastHomework.isNotEmpty()) {
+                item("past-header") { Header("Compiti passati") }
+                animItems(pastHomework, "past-$filter") { EventItem(it, showDate = true) }
             }
         }
     }

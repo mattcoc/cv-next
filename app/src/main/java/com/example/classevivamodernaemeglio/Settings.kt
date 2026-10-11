@@ -180,6 +180,8 @@ fun SettingsSheet(settings: Settings, onDismiss: () -> Unit) {
                 },
                 Modifier.fillMaxWidth().appear(7)
             ) { Text("Controlla adesso") }
+            Text("Aggiornamenti", Modifier.appear(8), style = MaterialTheme.typography.titleMedium, color = c.primary)
+            UpdateCard(Modifier.appear(9))
         }
     }
 }

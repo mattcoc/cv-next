@@ -53,7 +53,7 @@ import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.Grade
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -321,7 +321,10 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             label = "title"
                         ) { Text(it, fontWeight = FontWeight.SemiBold) }
                     },
-                    actions = { IconButton({ menu = true }) { Avatar(api.name) } }
+                    actions = {
+                        IconButton({ settingsOpen = true }) { Icon(Icons.Rounded.SettingsIcon, "Impostazioni") }
+                        IconButton({ menu = true }) { Avatar(api.name) }
+                    }
                 )
             }
         ) { padding ->
@@ -381,14 +384,14 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     }
     if (menu) AccountSheet(
         api, school.data, { menu = false }, { menu = false; onSwitch(it) }, { menu = false; onAdd() },
-        { menu = false; settingsOpen = true }, { menu = false; onLogout() }
+        { menu = false; onLogout() }
     )
     if (settingsOpen) SettingsSheet(settings) { settingsOpen = false }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSheet(api: Api, school: School?, onDismiss: () -> Unit, onSwitch: (String) -> Unit, onAdd: () -> Unit, onSettings: () -> Unit, onLogout: () -> Unit) {
+fun AccountSheet(api: Api, school: School?, onDismiss: () -> Unit, onSwitch: (String) -> Unit, onAdd: () -> Unit, onLogout: () -> Unit) {
     val c = MaterialTheme.colorScheme
     val clear = ListItemDefaults.colors(containerColor = Color.Transparent)
     ModalBottomSheet(onDismiss) {
@@ -425,17 +428,10 @@ fun AccountSheet(api: Api, school: School?, onDismiss: () -> Unit, onSwitch: (St
             )
             HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             ListItem(
-                headlineContent = { Text("Impostazioni") },
-                supportingContent = { Text("Colore e tema dell'app") },
-                leadingContent = { Icon(Icons.Rounded.Palette, null) },
-                colors = clear,
-                modifier = Modifier.appear(8).clickable(onClick = onSettings).padding(horizontal = 8.dp)
-            )
-            ListItem(
                 headlineContent = { Text("Esci da questo account", color = c.error) },
                 leadingContent = { Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = c.error) },
                 colors = clear,
-                modifier = Modifier.appear(9).clickable(onClick = onLogout).padding(horizontal = 8.dp)
+                modifier = Modifier.appear(8).clickable(onClick = onLogout).padding(horizontal = 8.dp)
             )
         }
     }

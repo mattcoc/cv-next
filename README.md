@@ -67,11 +67,15 @@ L'app controlla le novità circa una volta all'ora (solo con connessione attiva)
 - **più account** (ad esempio più figli o genitore e studente), con passaggio rapido dal menu del profilo
 - tema **sistema, chiaro o scuro**
 - colori **Material You** presi dallo sfondo (Android 12+) oppure uno tra 9 colori: indaco, blu, turchese, verde, giallo, arancio, rosso, rosa, viola
+- impostazioni sempre a portata di mano con l'icona a forma di ingranaggio in alto, accanto al profilo
+
+### Aggiornamenti
+Dalle impostazioni, "Controlla aggiornamenti" cerca l'ultima versione pubblicata nelle [Releases](../../releases) di GitHub. Se ce n'è una più nuova la scarica e la installa direttamente dall'app (la prima volta Android chiede di consentire a CV Next l'installazione di app).
 
 ## Privacy
 
 - Le credenziali vengono salvate **solo sul telefono**, cifrate con Android Keystore (EncryptedSharedPreferences). Servono per rinnovare la sessione in automatico e per l'accesso ai servizi web.
-- L'app comunica **esclusivamente con i server di Gruppo Spaggiari** (`web.spaggiari.eu`).
+- L'app comunica con i server di Gruppo Spaggiari (`web.spaggiari.eu`) e, solo quando controlli gli aggiornamenti, con GitHub (`api.github.com`, `github.com`) per scaricare la nuova versione. A GitHub non viene inviato nessun dato personale.
 - Nessun server dello sviluppatore, nessuna statistica, nessuna pubblicità, nessun tracciamento.
 - I file scaricati (PDF, allegati) restano nella cache dell'app o nella cartella Download se l'utente li salva.
 - Uscendo da un account le sue credenziali vengono cancellate; disinstallando l'app viene eliminato tutto.
@@ -80,7 +84,7 @@ L'app controlla le novità circa una volta all'ora (solo con connessione attiva)
 
 Scarica l'APK dalla pagina [Releases](../../releases) e aprilo sul telefono (bisogna consentire l'installazione da origini sconosciute). Serve Android 8.0 o superiore.
 
-Permessi usati: solo **Internet** e **Notifiche** (le notifiche vengono chieste solo quando le attivi).
+Permessi usati: **Internet**, **Notifiche** (chieste solo quando le attivi) e **Installazione di app**, usato solo per installare gli aggiornamenti scaricati da GitHub.
 
 ## Compilazione
 

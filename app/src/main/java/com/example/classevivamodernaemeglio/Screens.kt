@@ -1,5 +1,7 @@
 package com.example.classevivamodernaemeglio
 
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Close
@@ -226,10 +228,38 @@ fun GradeCircle(g: Grade, size: Dp = 44.dp) {
 @Composable
 fun GradeChip(g: Grade) {
     val (bg, fg) = gradeColors(g.decimal, g.counts)
-    Text(
-        g.value, Modifier.clip(MaterialTheme.shapes.small).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
-        color = fg, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge
-    )
+    val icon = gradeTypeIcon(g.type)
+    Row(
+        Modifier.clip(MaterialTheme.shapes.small).background(bg).padding(start = 10.dp, end = if (icon != null) 8.dp else 10.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(g.value, color = fg, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+        icon?.let { Icon(it, g.type, Modifier.size(14.dp), tint = fg) }
+    }
+}
+
+/** Icona del tipo di prova: scritto, orale o pratico. */
+fun gradeTypeIcon(type: String): ImageVector? {
+    val t = type.lowercase()
+    return when {
+        "oral" in t -> Icons.Rounded.RecordVoiceOver
+        "scritt" in t || "grafic" in t -> Icons.Rounded.EditNote
+        "pratic" in t || "laborator" in t -> Icons.Rounded.Build
+        else -> null
+    }
+}
+
+/** Lettera e colori di ogni tipo di assenza, usati nell'elenco e nella giornata. */
+@Composable
+fun absenceStyle(type: String): Triple<String, Color, Color> {
+    val c = MaterialTheme.colorScheme
+    return when (type) {
+        "Assenza" -> Triple("A", c.errorContainer, c.onErrorContainer)
+        "Assenza parziale" -> Triple("P", c.primaryContainer, c.onPrimaryContainer)
+        "Uscita anticipata" -> Triple("U", c.secondaryContainer, c.onSecondaryContainer)
+        else -> Triple("R", c.tertiaryContainer, c.onTertiaryContainer)
+    }
 }
 
 @Composable
@@ -297,7 +327,8 @@ fun DayPager(days: List<LocalDate>, selected: LocalDate, onSelect: (LocalDate) -
 fun LessonItem(l: Lesson) {
     val c = MaterialTheme.colorScheme
     val hours = if (l.hours > 1) "${l.hour}-${l.hour + l.hours - 1}" else "${l.hour}ª"
-    Item(l.subject, l.author, l.topic, expandable = true, leading = { Circle(hours, c.primaryContainer, c.onPrimaryContainer) })
+    val length = if (l.hours == 1) "1 ora" else "${l.hours} ore"
+    Item(l.subject, listOf(l.author, length).filter(String::isNotBlank).joinToString(" · "), l.topic, expandable = true, leading = { Circle(hours, c.primaryContainer, c.onPrimaryContainer) })
 }
 
 @Composable
@@ -328,9 +359,13 @@ fun TodayScreen(
     update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit, onAbsences: () -> Unit
 ) {
     val today = remember { LocalDate.now() }
-    val days = remember { (14L downTo 0L).map { today.minusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
-    val byDay = remember(lessons) { lessons.groupBy { it.date } }
-    var selected by rememberSaveable { mutableStateOf(if (today.toString() in byDay) today.toString() else byDay.keys.maxOrNull() ?: today.toString()) }
+    val days = remember { (-14L..14L).map { today.plusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
+    val busy = remember(lessons, agenda, grades, absences) {
+        (lessons.map { it.date } + agenda.map { it.date } + grades.map { it.date.take(10) } + absences.map { it.date.take(10) }).toSet()
+    }
+    var selected by rememberSaveable {
+        mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
+    }
     val pending = absences.count { !it.justified }
     Screen {
         item {
@@ -392,17 +427,12 @@ fun TodayScreen(
                 }
             }
         }
-        item { Box(Modifier.appear(2)) { Header("Lezioni") } }
-        item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { byDay.containsKey(it.toString()) }) { selected = it.toString() } } }
+        item { Box(Modifier.appear(2)) { Header("La giornata") } }
+        item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
         item {
             Box(Modifier.appear(4)) {
                 DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
-                    val list = byDay[day.toString()].orEmpty()
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        DayLabel(day)
-                        if (list.isEmpty()) Empty("Nessuna lezione registrata")
-                        list.forEach { LessonItem(it) }
-                    }
+                    DayContent(day, today, lessons, agenda, grades, absences)
                 }
             }
         }
@@ -475,21 +505,22 @@ fun AgendaScreen(events: List<Event>, filter: String, onFilter: (String) -> Unit
 @Composable
 fun AbsencesScreen(list: List<Absence>) {
     val c = MaterialTheme.colorScheme
-    val style = mapOf(
-        "Assenza" to Triple("A", c.errorContainer, c.onErrorContainer),
-        "Ritardo" to Triple("R", c.tertiaryContainer, c.onTertiaryContainer),
-        "Uscita anticipata" to Triple("U", c.secondaryContainer, c.onSecondaryContainer)
-    )
+    val kinds = listOf("Assenze" to "Assenza", "Ritardi" to "Ritardo", "Assenze parziali" to "Assenza parziale", "Uscite anticipate" to "Uscita anticipata")
     Screen {
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("Assenze" to "Assenza", "Ritardi" to "Ritardo", "Uscite" to "Uscita anticipata").forEachIndexed { i, (label, type) ->
-                    val (_, bg, fg) = style.getValue(type)
-                    val n = animatedValue(list.count { it.type == type }.toDouble())
-                    Card(Modifier.weight(1f).appear(i), colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg)) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("${Math.round(n)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                            Text(label, style = MaterialTheme.typography.labelLarge)
+        kinds.chunked(2).forEachIndexed { row, pair ->
+            item {
+                Row(Modifier.appear(row), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { (label, type) ->
+                        val (_, bg, fg) = absenceStyle(type)
+                        val of = list.filter { it.type == type }
+                        val n = animatedValue(of.size.toDouble())
+                        val open = of.count { !it.justified }
+                        Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = bg, contentColor = fg)) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("${Math.round(n)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                                Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                Text(if (open == 0) "Tutte giustificate" else "$open da giustificare", style = MaterialTheme.typography.labelMedium)
+                            }
                         }
                     }
                 }
@@ -501,7 +532,7 @@ fun AbsencesScreen(list: List<Absence>) {
             val headerIndex = index
             item { Box(Modifier.appear(headerIndex)) { Header(monthName(month)) } }
             animItems(events, month, index + 1) {
-                val (letter, bg, fg) = style.getValue(it.type)
+                val (letter, bg, fg) = absenceStyle(it.type)
                 Item(
                     it.type, longDate(it.date),
                     if (it.justified) listOf("Giustificata", it.reason).filter(String::isNotBlank).joinToString(" · ") else "Da giustificare",
@@ -562,4 +593,39 @@ fun DayLabel(day: LocalDate) = Row(Modifier.fillMaxWidth().padding(horizontal = 
     Icon(Icons.Rounded.Swipe, null, Modifier.size(16.dp), tint = c.onSurfaceVariant)
     Spacer(Modifier.width(4.dp))
     Text("scorri", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+}
+
+/** Tutto quello che riguarda un giorno: assenze, voti, compiti ed eventi, lezioni. */
+@Composable
+fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: List<Event>, grades: List<Grade>, absences: List<Absence>) {
+    val d = day.toString()
+    val dayAbsences = absences.filter { it.date.take(10) == d }
+    val dayGrades = grades.filter { it.date.take(10) == d }
+    val dayEvents = agenda.filter { it.date == d }
+    val dayLessons = lessons.filter { it.date == d }
+    val small: @Composable (String) -> Unit = {
+        Text(it, Modifier.padding(start = 4.dp, top = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        DayLabel(day)
+        if (dayAbsences.isEmpty() && dayGrades.isEmpty() && dayEvents.isEmpty() && dayLessons.isEmpty()) {
+            Empty(if (day > today) "Niente in programma" else "Nessuna lezione registrata")
+        }
+        dayAbsences.forEach {
+            val (letter, bg, fg) = absenceStyle(it.type)
+            Item(it.type, null, if (it.justified) "Giustificata" else "Da giustificare", leading = { Circle(letter, bg, fg) })
+        }
+        if (dayGrades.isNotEmpty()) {
+            small("Voti")
+            dayGrades.forEach { g -> Item(g.subject, g.type, g.notes, expandable = true, leading = { GradeCircle(g) }) }
+        }
+        if (dayEvents.isNotEmpty()) {
+            small(if (dayEvents.all { it.homework }) "Compiti" else "Compiti ed eventi")
+            dayEvents.forEach { EventItem(it) }
+        }
+        if (dayLessons.isNotEmpty()) {
+            small("Lezioni")
+            dayLessons.forEach { LessonItem(it) }
+        }
+    }
 }

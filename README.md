@@ -17,7 +17,7 @@ La schermata iniziale riassume la giornata:
 - saluto con data, classe e nome della scuola
 - avviso degli **eventi da giustificare** (assenze, ritardi, uscite), con collegamento all'elenco
 - avviso dei **pagamenti da fare** su PagOnline, con importo e scadenza
-- **lezioni** degli ultimi 14 giorni: si scorre tra i giorni con uno swipe o dalla striscia dei giorni; per ogni lezione ci sono ora, materia, docente e argomento
+- **la giornata**: una striscia con le due settimane prima e dopo oggi; per ogni giorno si vedono insieme assenze, voti presi, compiti ed eventi e lezioni (ora, durata, docente e argomento), scorrendo con uno swipe
 - **ultimi 10 voti** in un carosello
 - i prossimi 4 eventi in agenda
 
@@ -25,6 +25,7 @@ La schermata iniziale riassume la giornata:
 - media generale con anello colorato (verde se sufficiente, rosso se insufficiente)
 - schede per ogni periodo (trimestre, pentamestre, quadrimestri) più l'intero anno, con media e numero di voti; si apre in automatico il periodo in corso
 - vista **per materia**, con la media e gli ultimi voti di ciascuna, oppure **recenti**, in ordine di data
+- accanto a ogni voto un'icona indica se è scritto, orale o pratico
 - dettaglio di una materia: media dell'anno, media per periodo, tutti i voti con tipo (scritto, orale, …) e commento del docente
 - i voti che non fanno media (in blu sul registro) o annullati sono mostrati a parte e non entrano nel calcolo
 - **Quanto devo prendere?**: nel dettaglio della materia, il voto che serve al prossimo compito per arrivare alla media scelta (6, 7, 8 o 9) nel periodo in corso
@@ -45,7 +46,7 @@ Sezione con tutte le altre funzioni del registro.
 
 Dall'app:
 - **Scrutini**: esito degli scrutini, pagelle e documenti della scuola (i PDF si aprono nel lettore integrato)
-- **Assenze**: totale di assenze, ritardi e uscite anticipate, elenco per mese con stato della giustificazione e motivo
+- **Assenze**: totale di assenze, ritardi, assenze parziali e uscite anticipate, con quante restano da giustificare, ed elenco per mese con stato della giustificazione e motivo
 - **Note**: note disciplinari, richiami, annotazioni e sanzioni, con data e docente
 - **Lezioni**: registro delle lezioni degli ultimi 30 giorni con argomenti svolti
 - **File dei docenti**: materiale didattico diviso per docente e cartella (PDF, file, link e testi)

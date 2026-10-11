@@ -54,9 +54,11 @@ suspend fun Api.agenda(): List<Event> {
 }
 
 suspend fun Api.absences() = get("/absences/details").list("events").map {
-    val type = when (it.str("evtCode")) {
-        "ABA0" -> "Assenza"
-        "ABU0" -> "Uscita anticipata"
+    val code = it.str("evtCode")
+    val type = when {
+        code == "ABA0" -> "Assenza"
+        code.startsWith("ABA") -> "Assenza parziale"
+        code.startsWith("ABU") -> "Uscita anticipata"
         else -> "Ritardo"
     }
     Absence(it.str("evtDate"), type, it.optBoolean("isJustified"), it.str("justifReasonDesc"))

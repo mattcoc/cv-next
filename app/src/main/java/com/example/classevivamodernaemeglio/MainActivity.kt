@@ -139,6 +139,13 @@ class MainActivity : ComponentActivity() {
                     when (debugScreen) {
                         "settings" -> SettingsScreen(settings) { finish() }
                         "grades" -> Box(Modifier.statusBarsPadding()) { GradesScreen(DebugData.grades, DebugData.periods) }
+                        "today" -> Box(Modifier.statusBarsPadding()) {
+                            TodayScreen(
+                                "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
+                                DebugData.absences, emptyList(), {}, {}, null, {}, {}
+                            ) {}
+                        }
+                        "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
                         else -> App(api, settings, target, targetAccount)
                     }
                 }

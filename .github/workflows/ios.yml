@@ -58,6 +58,16 @@ jobs:
           name: CVNext-ipa
           path: ios/CVNext.ipa
 
+      # Pre-release, così l'aggiornamento in-app di Android (releases/latest) non la vede.
+      - name: Pubblica l'IPA nella release ios
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ios >/dev/null 2>&1 || gh release create ios --prerelease --target ios \
+            --title "CV Next per iOS (anteprima)" \
+            --notes "IPA non firmata, da installare con SideStore o AltStore. Richiede iOS 26 o successivo. Si aggiorna a ogni modifica del branch ios."
+          gh release upload ios ios/CVNext.ipa --clobber
+
       - name: Fotografa le schermate
         run: |
           xcrun simctl boot "$UDID"

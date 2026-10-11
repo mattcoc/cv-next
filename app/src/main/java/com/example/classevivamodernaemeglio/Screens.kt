@@ -257,7 +257,7 @@ fun absenceStyle(type: String): Triple<String, Color, Color> {
     return when (type) {
         "Assenza" -> Triple("A", c.errorContainer, c.onErrorContainer)
         "Assenza parziale" -> Triple("P", c.secondaryContainer, c.onSecondaryContainer)
-        "Uscita anticipata" -> Triple("U", c.surfaceContainerHighest, c.onSurfaceVariant)
+        "Uscita anticipata" -> Triple("U", c.outlineVariant, c.onSurface)
         else -> Triple("R", c.tertiaryContainer, c.onTertiaryContainer)
     }
 }

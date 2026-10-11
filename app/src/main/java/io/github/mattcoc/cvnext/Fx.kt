@@ -1,5 +1,6 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -59,7 +60,11 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 fun Modifier.appear(index: Int) = composed {
-    var done by rememberSaveable { mutableStateOf(index > 12) }
+    // Con le animazioni disattivate nelle impostazioni del telefono gli elementi compaiono subito.
+    val reduced = LocalContext.current.let {
+        android.provider.Settings.Global.getFloat(it.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+    var done by rememberSaveable { mutableStateOf(index > 12 || reduced) }
     val a = remember { Animatable(if (done) 1f else 0f) }
     LaunchedEffect(Unit) {
         if (done) return@LaunchedEffect

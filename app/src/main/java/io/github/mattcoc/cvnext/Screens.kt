@@ -1,5 +1,12 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.rounded.Grade
+import androidx.compose.material.icons.rounded.EventBusy
+import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -158,8 +165,11 @@ fun Header(text: String, action: String? = null, onAction: () -> Unit = {}) = Ro
 }
 
 @Composable
-fun Empty(text: String) = Card(Modifier.fillMaxWidth()) {
-    Text(text, Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun Empty(text: String, icon: ImageVector? = null) = Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        icon?.let { Icon(it, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Text(text, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -309,7 +319,10 @@ fun DayStrip(days: List<LocalDate>, selected: LocalDate, marked: (LocalDate) -> 
             val scale by animateFloatAsState(if (sel) 1.06f else 1f, spring(0.45f, 500f), label = "scale")
             Column(
                 Modifier.scale(scale).width(54.dp).clip(MaterialTheme.shapes.medium).background(bg)
-                    .clickable { onSelect(d) }.padding(vertical = 10.dp),
+                    .selectable(sel, role = Role.Tab) { onSelect(d) }
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = longDate(d.toString()) + if (marked(d)) ", ci sono attività" else ""
+                    }.padding(vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
@@ -457,7 +470,7 @@ fun TodayScreen(
             }
         }
         item { Box(Modifier.appear(5)) { Header("Ultimi voti", "Tutti") { open(Section.Voti) } } }
-        if (grades.isEmpty()) item { Empty("Nessun voto") }
+        if (grades.isEmpty()) item { Empty("Ancora nessun voto quest'anno", Icons.Rounded.Grade) }
         else item {
             LazyRow(Modifier.fadeEdges().appear(6), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(grades.take(10)) { i, g ->
@@ -513,7 +526,7 @@ fun ReminderDialog(day: LocalDate, onDismiss: () -> Unit, onSave: (String) -> Un
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(longDate(day.toString()), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), placeholder = { Text("Es. portare il libro di disegno") }, minLines = 2)
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Cosa ricordare") }, placeholder = { Text("Es. portare il libro di disegno") }, minLines = 2)
                 Text("Resta solo su questo telefono.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
@@ -694,7 +707,10 @@ fun DayContent(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         DayLabel(day)
         if (dayAbsences.isEmpty() && dayGrades.isEmpty() && dayEvents.isEmpty() && dayLessons.isEmpty() && reminders.isEmpty()) {
-            Empty(if (day > today) "Niente in programma" else "Nessuna lezione registrata")
+            Empty(
+                if (day > today) "Niente in programma" else "Nessuna lezione registrata",
+                if (day > today) Icons.Rounded.EventAvailable else Icons.Rounded.EventBusy
+            )
         }
         if (dayLessons.isNotEmpty()) {
             small("Lezioni")

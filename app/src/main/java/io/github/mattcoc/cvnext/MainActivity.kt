@@ -1,5 +1,8 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -329,7 +332,7 @@ fun Login(api: Api, onBack: (() -> Unit)?, onDone: () -> Unit) {
                     Spacer(Modifier.width(6.dp))
                     Text("Le credenziali restano cifrate solo sul tuo telefono", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("App non ufficiale. Non affiliata a Gruppo Spaggiari Parma S.p.A.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text("App non ufficiale. Non affiliata a Gruppo Spaggiari Parma S.p.A.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
         }
     }
@@ -419,7 +422,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                     },
                     actions = {
                         IconButton({ stack.add(Page.Preferences) }) { Icon(Icons.Rounded.SettingsIcon, "Impostazioni") }
-                        IconButton({ menu = true }) { Avatar(api.name) }
+                        IconButton({ menu = true }, Modifier.semantics { contentDescription = "Account e profilo" }) { Avatar(api.name) }
                     }
                 )
             }

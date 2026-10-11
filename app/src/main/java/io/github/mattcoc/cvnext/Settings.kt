@@ -1,5 +1,11 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -291,6 +297,7 @@ private fun CheckSwitch(on: Boolean, onChange: (Boolean) -> Unit) = Switch(
     thumbContent = if (on) { { Icon(Icons.Rounded.Check, null, Modifier.size(16.dp)) } } else null
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AppearanceCard(settings: Settings) {
     val c = MaterialTheme.colorScheme
@@ -300,7 +307,7 @@ private fun AppearanceCard(settings: Settings) {
             listOf("Sistema", "Chiaro", "Scuro").forEachIndexed { i, label ->
                 val sel = settings.mode == i
                 Column(
-                    Modifier.weight(1f).clip(MaterialTheme.shapes.medium).clickable { settings.update(mode = i) }.padding(bottom = 4.dp),
+                    Modifier.weight(1f).clip(MaterialTheme.shapes.medium).selectable(sel, role = Role.RadioButton) { settings.update(mode = i) }.padding(bottom = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -328,15 +335,22 @@ private fun AppearanceCard(settings: Settings) {
             Modifier.padding(horizontal = 16.dp),
             leadingIcon = { Icon(if (settings.seed == 0) Icons.Rounded.Check else Icons.Rounded.Wallpaper, null, Modifier.size(18.dp)) }
         )
-        Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 18.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Cerchi da 44 dp (area minima da toccare) che vanno a capo sugli schermi stretti.
+        FlowRow(
+            Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             seeds.filter { it.first != 0 }.forEach { (seed, label) ->
                 val sel = settings.seed == seed
                 Box(
-                    Modifier.weight(1f).aspectRatio(1f)
-                        .then(if (sel) Modifier.border(2.dp, Color(seed), CircleShape).padding(3.dp) else Modifier)
-                        .clip(CircleShape).background(Color(seed)).clickable(onClickLabel = label) { settings.update(seed = seed) },
+                    Modifier.size(44.dp)
+                        .then(if (sel) Modifier.border(2.dp, Color(seed), CircleShape).padding(4.dp) else Modifier)
+                        .clip(CircleShape).background(Color(seed))
+                        .selectable(sel, role = Role.RadioButton) { settings.update(seed = seed) }
+                        .semantics { contentDescription = label },
                     contentAlignment = Alignment.Center
-                ) { if (sel) Icon(Icons.Rounded.Check, label, tint = Color.White, modifier = Modifier.size(18.dp)) }
+                ) { if (sel) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
             }
         }
     }

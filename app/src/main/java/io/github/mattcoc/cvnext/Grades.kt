@@ -263,7 +263,8 @@ fun TrendCard(list: List<Grade>) {
     var picked by remember(points) { mutableIntStateOf(points.lastIndex) }
     val dotColors = points.map { gradeColors(it.decimal).first }
     val lineColor = c.primary
-    val grid = c.outlineVariant
+    val grid = c.outlineVariant.copy(alpha = 0.6f)
+    val passLine = c.outline
     val ring = c.surfaceContainerHigh
     val low = (points.minOf { it.decimal!! }.coerceAtMost(averages.min()) - 1).coerceAtLeast(1.0).toInt().toDouble()
     val high = 10.0
@@ -274,7 +275,9 @@ fun TrendCard(list: List<Grade>) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(c.onSurfaceVariant))
                 Text(" Voti   ", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
                 Box(Modifier.size(width = 14.dp, height = 2.dp).background(lineColor))
-                Text(" Media", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Text(" Media   ", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Box(Modifier.size(width = 14.dp, height = 2.dp).background(c.outline))
+                Text(" 6", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
             }
             val g = points[picked]
             Text(
@@ -295,9 +298,11 @@ fun TrendCard(list: List<Grade>) {
                 fun x(i: Int) = pad + w * i / (points.size - 1)
                 fun y(v: Double) = pad + (h * (1 - (v - low) / (high - low))).toFloat()
                 for (v in listOf(4.0, 6.0, 8.0, 10.0).filter { it >= low }) {
+                    val pass = v == 6.0
                     drawLine(
-                        grid, Offset(pad, y(v)), Offset(size.width - pad, y(v)), strokeWidth = 1.dp.toPx(),
-                        pathEffect = if (v == 6.0) PathEffect.dashPathEffect(floatArrayOf(8f, 8f)) else null
+                        if (pass) passLine else grid, Offset(pad, y(v)), Offset(size.width - pad, y(v)),
+                        strokeWidth = (if (pass) 1.5f else 1f).dp.toPx(),
+                        pathEffect = if (pass) PathEffect.dashPathEffect(floatArrayOf(10f, 8f)) else null
                     )
                 }
                 val path = Path().apply {
@@ -312,9 +317,9 @@ fun TrendCard(list: List<Grade>) {
                 }
             }
             Row {
-                Text(shortDate(points.first().date), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant)
-                Text("Tocca un punto per i dettagli", style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant)
-                Text(shortDate(points.last().date), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = c.onSurfaceVariant, textAlign = TextAlign.End)
+                Text(shortDate(points.first().date), Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Text("Tocca un punto per i dettagli", style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant)
+                Text(shortDate(points.last().date), Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = c.onSurfaceVariant, textAlign = TextAlign.End)
             }
         }
     }

@@ -1,0 +1,44 @@
+name: Elimina release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag delle release da eliminare, separati da spazio (es. v1.0 v1.1)'
+        required: true
+      drafts:
+        description: 'Elimina anche le bozze (true/false)'
+        default: 'true'
+
+permissions:
+  contents: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Elimina le release indicate
+        run: |
+          for tag in ${{ github.event.inputs.tags }}; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release delete "$tag" --yes
+              echo "Eliminata la release $tag (il tag Git resta)"
+            else
+              echo "::warning::Nessuna release con tag $tag"
+            fi
+          done
+
+      - name: Elimina le bozze
+        if: github.event.inputs.drafts == 'true'
+        run: |
+          gh api "repos/$GH_REPO/releases?per_page=100" --jq '.[] | select(.draft) | "\(.id) \(.name)"' |
+          while read -r id name; do
+            gh api -X DELETE "repos/$GH_REPO/releases/$id"
+            echo "Eliminata la bozza: $name"
+          done
+
+      - name: Release rimaste
+        run: gh release list

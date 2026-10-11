@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona di CV Next: l'anello della media che diventa una freccia, con le lettere CV. Versione per le icone a tema; generata da docs/icon.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,29.5 A24.5,24.5 0 1,1 32.37,42.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.6"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M26.54,39.4 L36.41,34.9 L38.2,45.6 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M52.12,48.2 A7.8,7.8 0 1,0 52.12,59.8"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M57.7,46.2 L62.85,61.8 L68,46.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

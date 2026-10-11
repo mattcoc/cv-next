@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+  <!-- Sorgente dell'icona di CV Next (griglia 108 delle icone adattive Android, zona sicura: cerchio di raggio 33).
+       I file in app/src/main/res/drawable/ic_launcher_*.xml e ic_notify.xml usano gli stessi tracciati. -->
+  <rect width="108" height="108" fill="#3949AB"/>
+  <path d="M29.5,54 a24.5,24.5 0 1,0 49.0,0 a24.5,24.5 0 1,0 -49.0,0" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="5.6"/>
+  <path d="M54,29.5 A24.5,24.5 0 1,1 32.37,42.5" fill="none" stroke="#7CE08A" stroke-width="5.6" stroke-linecap="round"/>
+  <path d="M26.54,39.4 L36.41,34.9 L38.2,45.6 Z" fill="#7CE08A" stroke="#7CE08A" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M52.12,48.2 A7.8,7.8 0 1,0 52.12,59.8" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <path d="M57.7,46.2 L62.85,61.8 L68,46.2" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

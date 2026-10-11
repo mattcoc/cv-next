@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icon-512.png" width="128" alt="Icona di CV Next"></p>
+
 # CV Next
 
 Client alternativo per ClasseViva.

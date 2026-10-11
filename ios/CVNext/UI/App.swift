@@ -94,8 +94,8 @@ struct HomeView: View {
     var body: some View {
         @Bindable var model = model
         TabView(selection: $model.tab) {
-            Tab("Oggi", systemImage: "house", value: AppTab.today) {
-                NavigationStack { TodayView().chrome("Oggi") }
+            Tab("Home", systemImage: "house", value: AppTab.today) {
+                NavigationStack { TodayView().chrome("Home") }
             }
             Tab("Voti", systemImage: "star", value: AppTab.grades) {
                 NavigationStack { GradesView().chrome("Voti") }

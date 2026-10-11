@@ -10,6 +10,16 @@ App Android non ufficiale per consultare il registro elettronico ClasseViva, con
 > "ClasseViva" è un marchio registrato di Gruppo Spaggiari Parma S.p.A. Tutti i dati mostrati e il servizio appartengono ai rispettivi proprietari.
 > L'app usa il servizio ClasseViva con le credenziali dell'utente. Uso a proprio rischio.
 
+
+<p align="center">
+  <img src="docs/screenshots/today.jpg" width="19%" alt="Oggi">
+  <img src="docs/screenshots/grades.jpg" width="19%" alt="Voti">
+  <img src="docs/screenshots/subject.jpg" width="19%" alt="Dettaglio materia">
+  <img src="docs/screenshots/absences.jpg" width="19%" alt="Assenze">
+  <img src="docs/screenshots/settings.jpg" width="19%" alt="Impostazioni">
+</p>
+<p align="center"><sub>Schermate con dati di esempio.</sub></p>
+
 ## Funzioni
 
 ### Oggi

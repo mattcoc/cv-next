@@ -1,0 +1,4 @@
+• Verifiche in arrivo in cima alla schermata Oggi, con il conto alla rovescia
+• Promemoria personali sui giorni e notifica della sera con i compiti del giorno dopo
+• Grafico dell'andamento dei voti nel dettaglio della materia
+• Se l'app si chiude per un errore, al riavvio propone una segnalazione già compilata

@@ -1,0 +1,12 @@
+<p><b>CV Next</b> è un'app non ufficiale per consultare il registro elettronico ClasseViva con un'interfaccia moderna Material You.</p>
+<p><b>Progetto non ufficiale</b>, non affiliato a Gruppo Spaggiari Parma S.p.A. "ClasseViva" è un marchio di Gruppo Spaggiari Parma S.p.A.</p>
+<ul>
+<li><b>Oggi</b>: la giornata con lezioni, compiti, voti e presenze, le verifiche in arrivo e i tuoi promemoria</li>
+<li><b>Voti</b>: medie per periodo e per materia, grafico dell'andamento e "Quanto devo prendere?"</li>
+<li><b>Agenda</b> e <b>Bacheca</b> con lettore PDF integrato</li>
+<li>Assenze, note, lezioni, materiale dei docenti, scrutini e servizi web con accesso automatico</li>
+<li>Notifiche per voti, bacheca, agenda, note e pagamenti, e un promemoria la sera prima</li>
+<li>Più account, anche più figli con le stesse credenziali</li>
+<li>Funziona offline con i dati dell'ultimo aggiornamento, widget dei compiti, tema chiaro/scuro e colori</li>
+</ul>
+<p><b>Privacy</b>: le credenziali restano cifrate sul telefono; l'app comunica solo con i server di ClasseViva e, per gli aggiornamenti, con GitHub. Nessuna pubblicità, statistica o tracciamento.</p>

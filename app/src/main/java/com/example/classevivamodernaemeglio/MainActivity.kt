@@ -349,10 +349,11 @@ class Res<T>(private val load: suspend () -> T) {
     }
 }
 
-enum class Section(val label: String, val icon: ImageVector, val selected: ImageVector) {
+/** [inBar] falso: la sezione si apre da Oggi e da Funzioni ma non ha un tasto nella barra in basso. */
+enum class Section(val label: String, val icon: ImageVector, val selected: ImageVector, val inBar: Boolean = true) {
     Oggi("Oggi", Icons.Outlined.Home, Icons.Rounded.Home),
     Voti("Voti", Icons.Outlined.Grade, Icons.Rounded.Grade),
-    Agenda("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth),
+    Agenda("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth, inBar = false),
     Bacheca("Bacheca", Icons.Outlined.Campaign, Icons.Rounded.Campaign),
     Funzioni("Funzioni", Icons.Outlined.Apps, Icons.Rounded.Apps)
 }
@@ -397,6 +398,9 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             transitionSpec = { (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut()) },
                             label = "title"
                         ) { Text(it, fontWeight = FontWeight.SemiBold) }
+                    },
+                    navigationIcon = {
+                        if (!section.inBar) IconButton({ section = Section.Oggi }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Indietro") }
                     },
                     actions = {
                         IconButton({ stack.add(Page.Preferences) }) { Icon(Icons.Rounded.SettingsIcon, "Impostazioni") }

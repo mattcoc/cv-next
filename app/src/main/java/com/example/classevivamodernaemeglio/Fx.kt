@@ -135,7 +135,7 @@ fun FloatingNavBar(selected: Section, modifier: Modifier = Modifier, onSelect: (
         shadowElevation = 10.dp
     ) {
         Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Section.entries.forEach { s ->
+            Section.entries.filter { it.inBar }.forEach { s ->
                 val sel = s == selected
                 val pill by animateFloatAsState(if (sel) 1f else 0f, spring(0.75f, 600f), label = "pill")
                 val fg by animateColorAsState(if (sel) c.onSecondaryContainer else c.onSurfaceVariant, label = "fg")

@@ -31,6 +31,7 @@ La schermata iniziale riassume la giornata:
 - **Quanto devo prendere?**: nel dettaglio della materia, il voto che serve al prossimo compito per arrivare alla media scelta (6, 7, 8 o 9) nel periodo in corso
 
 ### Agenda
+Si apre da "In arrivo" nella schermata Oggi o da Funzioni (la barra in basso tiene solo Oggi, Voti, Bacheca e Funzioni, perché i compiti di ogni giorno sono già in Oggi).
 - eventi e compiti dei prossimi 30 giorni, giorno per giorno con swipe, più l'elenco dei giorni successivi
 - si può tornare indietro fino a 30 giorni
 - filtro **Compiti** che mostra i compiti in arrivo raggruppati per data e, sotto, quelli passati

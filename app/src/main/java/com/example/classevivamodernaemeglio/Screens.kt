@@ -1,5 +1,6 @@
 package com.example.classevivamodernaemeglio
 
+import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.ui.graphics.luminance
@@ -253,13 +254,16 @@ fun gradeTypeIcon(type: String): ImageVector? {
 /** Lettera e colori di ogni tipo di assenza, usati nell'elenco e nella giornata. */
 @Composable
 fun absenceStyle(type: String): Triple<String, Color, Color> {
-    val c = MaterialTheme.colorScheme
-    return when (type) {
-        "Assenza" -> Triple("A", c.errorContainer, c.onErrorContainer)
-        "Assenza parziale" -> Triple("P", c.secondaryContainer, c.onSecondaryContainer)
-        "Uscita anticipata" -> Triple("U", c.outlineVariant, c.onSurface)
-        else -> Triple("R", c.tertiaryContainer, c.onTertiaryContainer)
+    // Colori fissi, uguali con ogni tema: rosso, arancio, blu e giallo come nel registro.
+    val dark = MaterialTheme.colorScheme.isDark()
+    fun pick(light: Long, onLight: Long, darkBg: Long, onDark: Long) = if (dark) Color(darkBg) to Color(onDark) else Color(light) to Color(onLight)
+    val (letter, colors) = when (type) {
+        "Assenza" -> "A" to pick(0xFFFFDAD6, 0xFF410002, 0xFF93000A, 0xFFFFDAD6)
+        "Assenza parziale" -> "P" to pick(0xFFD1E4FF, 0xFF001D36, 0xFF004A77, 0xFFD1E4FF)
+        "Uscita anticipata" -> "U" to pick(0xFFFFE08A, 0xFF241A00, 0xFF574500, 0xFFFFE08A)
+        else -> "R" to pick(0xFFFFDCC2, 0xFF2E1500, 0xFF6E3900, 0xFFFFDCC2)
     }
+    return Triple(letter, colors.first, colors.second)
 }
 
 @Composable
@@ -507,7 +511,19 @@ fun AbsencesScreen(list: List<Absence>) {
     val c = MaterialTheme.colorScheme
     val kinds = listOf("Assenze" to "Assenza", "Ritardi" to "Ritardo", "Assenze parziali" to "Assenza parziale", "Uscite anticipate" to "Uscita anticipata")
     Screen {
-        kinds.chunked(2).forEachIndexed { row, pair ->
+        if (list.isEmpty()) item {
+            Card(
+                Modifier.fillMaxWidth().appear(0),
+                colors = CardDefaults.cardColors(containerColor = averageCardColors(10.0).first, contentColor = averageCardColors(10.0).second)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Rounded.Verified, null, Modifier.size(48.dp))
+                    Text("Presenza perfetta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Quest'anno nessuna assenza, ritardo o uscita anticipata.", textAlign = TextAlign.Center)
+                }
+            }
+        }
+        if (list.isNotEmpty()) kinds.chunked(2).forEachIndexed { row, pair ->
             item {
                 Row(Modifier.appear(row), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     pair.forEach { (label, type) ->
@@ -519,14 +535,20 @@ fun AbsencesScreen(list: List<Absence>) {
                             Column(Modifier.padding(16.dp)) {
                                 Text("${Math.round(n)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                                 Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                                Text(if (open == 0) "Tutte giustificate" else "$open da giustificare", style = MaterialTheme.typography.labelMedium)
+                                Text(
+                                    when {
+                                        of.isEmpty() -> "Nessuna"
+                                        open == 0 -> if (of.size == 1) "Giustificata" else "Tutte giustificate"
+                                        else -> "$open da giustificare"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                             }
                         }
                     }
                 }
             }
         }
-        if (list.isEmpty()) item { Empty("Nessuna assenza") }
         var index = 3
         list.groupBy { it.date.take(7) }.forEach { (month, events) ->
             val headerIndex = index
@@ -611,21 +633,24 @@ fun DayContent(day: LocalDate, today: LocalDate, lessons: List<Lesson>, agenda: 
         if (dayAbsences.isEmpty() && dayGrades.isEmpty() && dayEvents.isEmpty() && dayLessons.isEmpty()) {
             Empty(if (day > today) "Niente in programma" else "Nessuna lezione registrata")
         }
-        dayAbsences.forEach {
-            val (letter, bg, fg) = absenceStyle(it.type)
-            Item(it.type, null, if (it.justified) "Giustificata" else "Da giustificare", leading = { Circle(letter, bg, fg) })
-        }
-        if (dayGrades.isNotEmpty()) {
-            small("Voti")
-            dayGrades.forEach { g -> Item(g.subject, g.type, g.notes, expandable = true, leading = { GradeCircle(g) }) }
+        if (dayLessons.isNotEmpty()) {
+            small("Lezioni")
+            dayLessons.forEach { LessonItem(it) }
         }
         if (dayEvents.isNotEmpty()) {
             small(if (dayEvents.all { it.homework }) "Compiti" else "Compiti ed eventi")
             dayEvents.forEach { EventItem(it) }
         }
-        if (dayLessons.isNotEmpty()) {
-            small("Lezioni")
-            dayLessons.forEach { LessonItem(it) }
+        if (dayGrades.isNotEmpty()) {
+            small("Voti")
+            dayGrades.forEach { g -> Item(g.subject, g.type, g.notes, expandable = true, leading = { GradeCircle(g) }) }
+        }
+        if (dayAbsences.isNotEmpty()) {
+            small("Presenze")
+            dayAbsences.forEach {
+                val (letter, bg, fg) = absenceStyle(it.type)
+                Item(it.type, null, if (it.justified) "Giustificata" else "Da giustificare", leading = { Circle(letter, bg, fg) })
+            }
         }
     }
 }

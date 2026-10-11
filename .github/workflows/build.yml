@@ -22,4 +22,4 @@ jobs:
       - name: Compila
         run: |
           chmod +x gradlew
-          ./gradlew testReleaseUnitTest assembleRelease --stacktrace
+          ./gradlew testDebugUnitTest assembleRelease --stacktrace

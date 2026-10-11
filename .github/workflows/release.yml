@@ -42,7 +42,7 @@ jobs:
       - name: Compila APK
         run: |
           chmod +x gradlew
-          ./gradlew testReleaseUnitTest assembleRelease --stacktrace
+          ./gradlew testDebugUnitTest assembleRelease --stacktrace
           cp app/build/outputs/apk/release/app-release.apk "cv-next-$VERSION.apk"
 
       - name: Note di versione

@@ -345,7 +345,7 @@ private fun AppearanceCard(settings: Settings) {
                             .border(if (sel) 2.dp else 1.dp, if (sel) c.primary else c.outlineVariant, MaterialTheme.shapes.medium)
                     )
                     Text(
-                        s.label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                        s.label, style = MaterialTheme.typography.bodySmall, maxLines = 1,
                         color = if (sel) c.primary else c.onSurfaceVariant, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }

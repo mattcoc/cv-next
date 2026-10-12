@@ -159,7 +159,11 @@ fun Header(text: String, action: String? = null, onAction: () -> Unit = {}) = Ro
     Modifier.fillMaxWidth().padding(top = 10.dp, start = 4.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
-    Text(text, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+    val oneUi = LocalStyle.current == AppStyle.OneUI
+    Text(
+        text, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+        color = if (oneUi) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+    )
     action?.let { TextButton(onAction) { Text(it) } }
 }
 

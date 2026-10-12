@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.materialkolor.rememberDynamicColorScheme
 
 /** Stile grafico dell'app. Quelli con [ownColors] hanno i loro colori e ignorano il colore scelto. */
@@ -102,7 +103,7 @@ fun styledShapes(style: AppStyle): Shapes = when (style) {
     AppStyle.Material -> shapes(8, 12, 20, 28, 32)
     AppStyle.Glass -> shapes(10, 16, 26, 30, 36)
     AppStyle.OneUI -> shapes(10, 16, 26, 28, 32)
-    AppStyle.HyperOS -> shapes(8, 14, 22, 26, 30)
+    AppStyle.HyperOS -> shapes(8, 12, 16, 20, 28)
     AppStyle.Nothing -> shapes(6, 12, 18, 22, 28)
 }
 
@@ -114,7 +115,7 @@ private fun shapes(xs: Int, s: Int, m: Int, l: Int, xl: Int) = Shapes(
 /** Doto: carattere a puntini simile a quello di Nothing (licenza OFL, vedi licenses/Doto-OFL.txt). */
 @OptIn(ExperimentalTextApi::class)
 private val Dots = FontFamily(
-    listOf(FontWeight.Normal to 500, FontWeight.Medium to 600, FontWeight.SemiBold to 700, FontWeight.Bold to 800).map { (w, v) ->
+    listOf(FontWeight.Normal to 800, FontWeight.Medium to 850, FontWeight.SemiBold to 900, FontWeight.Bold to 900).map { (w, v) ->
         Font(R.font.doto, w, variationSettings = FontVariation.Settings(FontVariation.weight(v), FontVariation.Setting("ROND", 100f)))
     }
 )
@@ -133,7 +134,14 @@ fun styledTypography(style: AppStyle): Typography {
             labelMedium = t.labelMedium.copy(fontFamily = FontFamily.Monospace),
             labelSmall = t.labelSmall.copy(fontFamily = FontFamily.Monospace)
         )
-        AppStyle.OneUI, AppStyle.HyperOS -> t.copy(
+        // One UI: titoli grandi, sezioni piccole e grigie
+        AppStyle.OneUI -> t.copy(
+            headlineMedium = t.headlineMedium.copy(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
+            headlineSmall = t.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            titleLarge = t.titleLarge.copy(fontWeight = FontWeight.Bold),
+            titleMedium = t.titleMedium.copy(fontSize = 14.sp)
+        )
+        AppStyle.HyperOS -> t.copy(
             headlineMedium = t.headlineMedium.copy(fontWeight = FontWeight.Bold),
             headlineSmall = t.headlineSmall.copy(fontWeight = FontWeight.Bold),
             titleLarge = t.titleLarge.copy(fontWeight = FontWeight.Bold)
@@ -164,7 +172,7 @@ fun panelColor(): Color = MaterialTheme.colorScheme.let { c ->
 fun barColor(): Color = MaterialTheme.colorScheme.let { c ->
     when (LocalStyle.current) {
         AppStyle.Material -> c.surfaceContainer
-        AppStyle.Glass -> if (LocalDark.current) Color(0xFF1C1C24).copy(alpha = 0.82f) else Color.White.copy(alpha = 0.8f)
+        AppStyle.Glass -> if (LocalDark.current) Color(0xFF1C1C24).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.92f)
         else -> c.surfaceContainer
     }
 }

@@ -8,6 +8,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings as SystemSettings
+import android.net.Uri
+import android.content.ComponentName
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -29,6 +33,32 @@ enum class Alert(val title: String, val description: String, val single: String,
     Notes("Note", "Note disciplinari e annotazioni", "Nuova nota", "Funzioni"),
     Payments("PagOnline", "Pagamenti da effettuare", "Pagamento da fare", "Funzioni"),
     Mentions("Il tuo nome", "Quando sei nominato in agenda, ad esempio tra gli interrogati", "Sei nominato in agenda", "Oggi")
+}
+
+/**
+ * Con l'ottimizzazione della batteria attiva (e su Xiaomi senza "avvio automatico") il sistema
+ * rimanda o salta i controlli in background: le notifiche arrivano solo aprendo l'app.
+ */
+object Battery {
+    fun restricted(context: Context): Boolean = runCatching {
+        !context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+    }.getOrDefault(false)
+
+    /** Finestra di sistema che chiede di lasciar funzionare l'app in background. */
+    fun request(context: Context): Intent =
+        Intent(SystemSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+
+    val xiaomi: Boolean get() = Build.MANUFACTURER.lowercase() in setOf("xiaomi", "redmi", "poco")
+
+    /** Pagina "Avvio automatico" di MIUI e HyperOS; se non esiste, le informazioni dell'app. */
+    fun autostart(context: Context): List<Intent> = listOf(
+        Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+        Intent(SystemSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+    )
+
+    fun open(context: Context, intents: List<Intent>) {
+        for (i in intents) if (runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    }
 }
 
 object Notifier {

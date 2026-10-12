@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Campaign
@@ -477,6 +479,9 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
         pending = null
         Notifier.schedule(context, settings.alerts)
     }
+    var restricted by remember { mutableStateOf(Battery.restricted(context)) }
+    val battery = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { restricted = Battery.restricted(context) }
+    val askBattery = { if (Battery.restricted(context)) runCatching { battery.launch(Battery.request(context)) } }
     val withPermission: (() -> Unit) -> Unit = { action ->
         val needs = Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -500,13 +505,29 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
     Group {
         SettingRow(
             if (any) Icons.Rounded.NotificationsActive else Icons.Rounded.Notifications, "Notifiche", status, accent = true,
-            onClick = { if (any) { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) } else withPermission { settings.toggleAll(true) } },
+            onClick = { if (any) { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) } else withPermission { settings.toggleAll(true); askBattery() } },
             trailing = {
                 CheckSwitch(any) { on ->
-                    if (on) withPermission { settings.toggleAll(true) } else { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) }
+                    if (on) withPermission { settings.toggleAll(true); askBattery() } else { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) }
                 }
             }
         )
+        if (any && restricted) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+            SettingRow(
+                Icons.Rounded.BatteryAlert, "Le notifiche possono non arrivare",
+                "Il risparmio batteria blocca i controlli ad app chiusa. Tocca e scegli \"Consenti\".",
+                accent = true, onClick = { runCatching { battery.launch(Battery.request(context)) } }, trailing = { Chevron() }
+            )
+        }
+        if (any && Battery.xiaomi) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+            SettingRow(
+                Icons.Rounded.RestartAlt, "Avvio automatico",
+                "Su Xiaomi attivalo per CV Next, altrimenti i controlli si fermano quando chiudi l'app",
+                onClick = { Battery.open(context, Battery.autostart(context)) }, trailing = { Chevron() }
+            )
+        }
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
         Alert.entries.forEachIndexed { i, alert ->
             val on = alert in settings.alerts

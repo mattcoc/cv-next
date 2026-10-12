@@ -422,6 +422,14 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     var update by remember { mutableStateOf<Release?>(null) }
     val reminders = remember { ReminderStore(context) }
     LaunchedEffect(Unit) { if (settings.autoUpdate) update = Updater.dailyCheck(context) }
+    // Chi ha già le notifiche attive ma il risparmio batteria le blocca: chiede una volta di lasciar lavorare l'app in background.
+    LaunchedEffect(settings.guideDone) {
+        val prefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+        if (settings.guideDone && settings.alerts.isNotEmpty() && Battery.restricted(context) && !prefs.getBoolean("batteryAsked", false)) {
+            prefs.edit().putBoolean("batteryAsked", true).apply()
+            runCatching { context.startActivity(Battery.request(context)) }
+        }
+    }
     LaunchedEffect(target.value) {
         target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
         target.value = null

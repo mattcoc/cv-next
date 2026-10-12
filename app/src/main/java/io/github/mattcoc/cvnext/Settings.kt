@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.Brush
@@ -221,9 +222,11 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
     val context = LocalContext.current
     var privacy by remember { mutableStateOf(false) }
     SubScreen("Impostazioni", onBack) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        val side = sideMargin(maxWidth, 680.dp)
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 32.dp),
+            contentPadding = PaddingValues(side, 4.dp, side, 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item { Box(Modifier.appear(0)) { SectionTitle("Aspetto") } }
@@ -250,6 +253,7 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
                     }
                 }
             }
+        }
         }
     }
     if (privacy) AlertDialog(

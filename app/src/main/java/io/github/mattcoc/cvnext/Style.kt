@@ -44,6 +44,12 @@ enum class AppStyle(val label: String, val description: String, val ownColors: B
 val LocalStyle = staticCompositionLocalOf { AppStyle.Material }
 val LocalDark = staticCompositionLocalOf { false }
 
+/** Tablet, schermi larghi o telefono in orizzontale: barra laterale e contenuto centrato. */
+val LocalWide = staticCompositionLocalOf { false }
+
+/** Margine laterale che tiene il contenuto in una colonna leggibile sugli schermi larghi. */
+fun sideMargin(width: Dp, content: Dp = 760.dp): Dp = maxOf(16.dp, (width - content) / 2)
+
 /** Colori dello stile: parte da quelli di Material You e cambia sfondi, superfici e accento. */
 @Composable
 fun styledColors(style: AppStyle, base: ColorScheme, dark: Boolean): ColorScheme = when (style) {

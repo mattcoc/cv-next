@@ -104,7 +104,8 @@ fun GuideOverlay(onSection: (Section) -> Unit, start: Int = 0, onDone: () -> Uni
     BoxWithConstraints(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).pointerInput(Unit) { detectTapGestures { } }
     ) {
-        val tab = if (index == 0 || step.top) -1 else bar.indexOf(step.section)
+        // Sui tablet la barra è di lato: il fumetto sta al centro, senza freccia
+        val tab = if (index == 0 || step.top || LocalWide.current) -1 else bar.indexOf(step.section)
         // Centro del pulsante nella barra: margine 16 dp, bordo interno 6 dp, pulsanti larghi uguali
         val inner = maxWidth - 44.dp
         val arrowX = if (step.top) maxWidth - 76.dp else 22.dp + inner * ((tab + 0.5f) / bar.size)

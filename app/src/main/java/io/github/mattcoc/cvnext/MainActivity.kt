@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -104,6 +106,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -203,7 +206,10 @@ fun AppTheme(settings: Settings, content: @Composable () -> Unit) {
         }
     }
     MaterialTheme(colorScheme = colors, shapes = styledShapes(settings.style), typography = styledTypography(settings.style)) {
-        CompositionLocalProvider(LocalStyle provides settings.style, LocalDark provides dark, content = content)
+        CompositionLocalProvider(
+            LocalStyle provides settings.style, LocalDark provides dark,
+            LocalWide provides (LocalConfiguration.current.screenWidthDp >= 600), content = content
+        )
     }
 }
 
@@ -306,8 +312,9 @@ fun Login(api: Api, onBack: (() -> Unit)?, onDone: () -> Unit) {
     }
     Box(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
         onBack?.let { IconButton(it, Modifier.padding(8.dp)) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Indietro") } }
+        // Sui tablet il modulo resta largo come su un telefono, al centro
         Column(
-            Modifier.fillMaxSize().padding(24.dp),
+            Modifier.fillMaxHeight().widthIn(max = 480.dp).fillMaxWidth().align(Alignment.TopCenter).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
         ) {
             Text("CV Next", Modifier.appear(0), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -439,10 +446,11 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                 )
             }
         ) { padding ->
+            val wide = LocalWide.current
             Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
                 AnimatedContent(
                     section,
-                    Modifier.fillMaxSize(),
+                    Modifier.fillMaxSize().padding(start = if (wide) 100.dp else 0.dp),
                     transitionSpec = {
                         (fadeIn(tween(220, delayMillis = 90)) + scaleIn(tween(220, delayMillis = 90), initialScale = 0.96f)) togetherWith
                             fadeOut(tween(90))
@@ -473,7 +481,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                         }
                     }
                 }
-                FloatingNavBar(section, Modifier.align(Alignment.BottomCenter)) { section = it }
+                if (wide) SideRail(section, Modifier.align(Alignment.TopStart)) { section = it }
+                else FloatingNavBar(section, Modifier.align(Alignment.BottomCenter)) { section = it }
             }
         }
         val back: () -> Unit = { stack.removeLastOrNull() }

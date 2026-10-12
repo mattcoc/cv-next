@@ -103,6 +103,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.first
 import java.time.DayOfWeek
@@ -134,12 +135,16 @@ fun LoadingState() = LazyColumn(
 @Composable
 fun Screen(content: LazyListScope.() -> Unit) {
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, bottom + 104.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content
-    )
+    val wide = LocalWide.current
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val side = sideMargin(maxWidth)
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(side, 8.dp, side, bottom + if (wide) 24.dp else 104.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
 }
 
 fun <T> LazyListScope.animItems(list: List<T>, key: String, start: Int = 0, content: @Composable (T) -> Unit) =

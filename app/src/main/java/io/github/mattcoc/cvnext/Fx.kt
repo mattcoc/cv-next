@@ -131,7 +131,6 @@ fun ExpandableText(text: String, color: Color = MaterialTheme.colorScheme.onSurf
 
 @Composable
 fun FloatingNavBar(selected: Section, modifier: Modifier = Modifier, onSelect: (Section) -> Unit) {
-    val c = MaterialTheme.colorScheme
     val style = LocalStyle.current
     Surface(
         modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -142,33 +141,55 @@ fun FloatingNavBar(selected: Section, modifier: Modifier = Modifier, onSelect: (
         border = styleBorder()
     ) {
         Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Section.entries.filter { it.inBar }.forEach { s ->
-                val sel = s == selected
-                val pill by animateFloatAsState(if (sel) 1f else 0f, spring(0.75f, 600f), label = "pill")
-                val fg by animateColorAsState(
-                    if (sel && style == AppStyle.Nothing) c.primary else if (sel) c.onSecondaryContainer else c.onSurfaceVariant, label = "fg"
-                )
-                val source = remember { MutableInteractionSource() }
-                Column(
-                    Modifier.weight(1f).fillMaxHeight().clickable(source, null) { onSelect(s) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(Modifier.size(56.dp, 32.dp).clip(CircleShape).indication(source, ripple()), contentAlignment = Alignment.Center) {
-                        Box(
-                            Modifier.matchParentSize().graphicsLayer { scaleX = 0.4f + 0.6f * pill; alpha = pill }
-                                .clip(CircleShape).background(c.secondaryContainer)
-                        )
-                        Crossfade(sel, label = "icon") { Icon(if (it) s.selected else s.icon, s.label, tint = fg) }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        s.label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false,
-                        color = if (sel) c.onSurface else c.onSurfaceVariant,
-                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium
-                    )
-                }
-            }
+            Section.entries.filter { it.inBar }.forEach { s -> NavItem(s, s == selected, Modifier.weight(1f).fillMaxHeight(), onSelect) }
+        }
+    }
+}
+
+@Composable
+private fun NavItem(s: Section, sel: Boolean, modifier: Modifier, onSelect: (Section) -> Unit) {
+    val c = MaterialTheme.colorScheme
+    val style = LocalStyle.current
+    val pill by animateFloatAsState(if (sel) 1f else 0f, spring(0.75f, 600f), label = "pill")
+    val fg by animateColorAsState(
+        if (sel && style == AppStyle.Nothing) c.primary else if (sel) c.onSecondaryContainer else c.onSurfaceVariant, label = "fg"
+    )
+    val source = remember { MutableInteractionSource() }
+    Column(
+        modifier.clickable(source, null) { onSelect(s) },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(Modifier.size(56.dp, 32.dp).clip(CircleShape).indication(source, ripple()), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.matchParentSize().graphicsLayer { scaleX = 0.4f + 0.6f * pill; alpha = pill }
+                    .clip(CircleShape).background(c.secondaryContainer)
+            )
+            Crossfade(sel, label = "icon") { Icon(if (it) s.selected else s.icon, s.label, tint = fg) }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            s.label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false,
+            color = if (sel) c.onSurface else c.onSurfaceVariant,
+            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium
+        )
+    }
+}
+
+/** Barra laterale per tablet e schermi larghi, con gli stessi pulsanti della barra in basso. */
+@Composable
+fun SideRail(selected: Section, modifier: Modifier = Modifier, onSelect: (Section) -> Unit) {
+    val style = LocalStyle.current
+    Surface(
+        modifier.navigationBarsPadding().padding(start = 12.dp, top = 8.dp, bottom = 12.dp).width(88.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = barColor(),
+        tonalElevation = if (style == AppStyle.Material) 3.dp else 0.dp,
+        shadowElevation = barElevation(style),
+        border = styleBorder()
+    ) {
+        Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Section.entries.filter { it.inBar }.forEach { s -> NavItem(s, s == selected, Modifier.fillMaxWidth().height(72.dp), onSelect) }
         }
     }
 }

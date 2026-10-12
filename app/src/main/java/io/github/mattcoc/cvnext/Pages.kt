@@ -146,20 +146,21 @@ fun FunctionsScreen(open: (Page) -> Unit, onHomework: () -> Unit, goto: (Section
         Fn("Registro Web", Icons.Rounded.Language, true) { open(Page.Web("Registro Web", WebLinks.home)) },
         Fn("Anno precedente", Icons.Rounded.History, true) { open(Page.Web("Anno precedente", WebLinks.lastYear)) }
     )
+    val columns = if (LocalWide.current) 5 else 3
     Screen {
         item { Box(Modifier.appear(0)) { Header("Scuola") } }
-        grid(school, 1)
+        grid(school, 1, columns)
         item { Box(Modifier.appear(5)) { Header("Servizi Web") } }
-        grid(web, 6)
+        grid(web, 6, columns)
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.grid(fns: List<Fn>, start: Int) =
-    fns.chunked(3).forEachIndexed { row, chunk ->
+private fun androidx.compose.foundation.lazy.LazyListScope.grid(fns: List<Fn>, start: Int, columns: Int) =
+    fns.chunked(columns).forEachIndexed { row, chunk ->
         item {
             Row(Modifier.appear(start + row), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 chunk.forEach { FnCard(it, Modifier.weight(1f)) }
-                repeat(3 - chunk.size) { Spacer(Modifier.weight(1f)) }
+                repeat(columns - chunk.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }

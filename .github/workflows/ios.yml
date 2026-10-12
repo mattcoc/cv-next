@@ -8,7 +8,7 @@ on:
     inputs:
       screens:
         description: 'Schermate da fotografare, separate da spazio'
-        default: 'today grades subject agenda notices functions absences settings login loginAdd'
+        default: 'today day grades subject agenda notices functions absences settings login loginAdd'
 
 permissions:
   contents: write
@@ -89,7 +89,7 @@ jobs:
           mkdir -p shots
           for mode in light dark; do
             xcrun simctl ui "$UDID" appearance $mode
-            for screen in ${{ github.event.inputs.screens || 'today grades subject agenda notices functions absences settings login loginAdd' }}; do
+            for screen in ${{ github.event.inputs.screens || 'today day grades subject agenda notices functions absences settings login loginAdd' }}; do
               xcrun simctl terminate "$UDID" io.github.mattcoc.cvnext 2>/dev/null || true
               xcrun simctl launch "$UDID" io.github.mattcoc.cvnext -debugScreen $screen
               sleep 6

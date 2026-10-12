@@ -67,6 +67,7 @@ struct DebugRoot: View {
             HomeView(model: model, onSwitch: { _ in }, onAdd: {}, onLogout: {})
                 .onAppear {
                     switch screen {
+                    case "day": model.tab = .day
                     case "grades": model.tab = .grades
                     case "notices": model.tab = .notices
                     case "functions": model.tab = .functions
@@ -96,6 +97,9 @@ struct HomeView: View {
         TabView(selection: $model.tab) {
             Tab("Home", systemImage: "house", value: AppTab.today) {
                 NavigationStack { TodayView().chrome("Home") }
+            }
+            Tab("Giornata", systemImage: "calendar", value: AppTab.day) {
+                NavigationStack { DayView().chrome("Giornata") }
             }
             Tab("Voti", systemImage: "star", value: AppTab.grades) {
                 NavigationStack { GradesView().chrome("Voti") }

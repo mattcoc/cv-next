@@ -5,10 +5,6 @@ struct TodayView: View {
     @Environment(\.appTint) private var tint
 
     private let today = Day.today
-    private let days: [Date] = (-14...14).map { Day.add(Day.today, $0) }.filter { !Day.isSunday($0) }
-    @State private var selected: Date = (-14...14).map { Day.add(Day.today, $0) }.first { !Day.isSunday($0) && $0 >= Day.today } ?? Day.today
-    @State private var addingFor: Date?
-    @State private var reminderText = ""
     @State private var showAgenda = false
 
     var body: some View {
@@ -16,22 +12,12 @@ struct TodayView: View {
             Loaded(model.lessons, model.grades, model.agenda, model.absences) { content }
         }
         .navigationDestination(isPresented: $showAgenda) { AgendaView(filter: "Tutto").navigationTitle("Agenda") }
-        .alert("Promemoria", isPresented: Binding(get: { addingFor != nil }, set: { if !$0 { addingFor = nil } })) {
-            TextField("Es. portare il libro di disegno", text: $reminderText)
-            Button("Salva") {
-                if let day = addingFor { model.reminders.add(model.debugName != nil ? "debug" : (model.api.current ?? ""), Day.iso(day), reminderText) }
-                reminderText = ""
-            }
-            Button("Annulla", role: .cancel) { reminderText = "" }
-        } message: {
-            Text("\(addingFor.map { longDate(Day.iso($0)) } ?? "")\nResta solo su questo telefono.")
-        }
     }
 
     @ViewBuilder private var content: some View {
-        let lessons = model.lessons.data ?? []
         let grades = model.grades.data ?? []
         let agenda = model.agenda.data ?? []
+        let lessons = model.lessons.data ?? []
         let absences = model.absences.data ?? []
         let payments = model.payments.data ?? []
         let teachers = Teachers(lessons)
@@ -39,7 +25,6 @@ struct TodayView: View {
         let todayIso = Day.iso(today)
         let limit = Day.iso(Day.add(today, 14))
         let tests = agenda.filter { $0.isTest && $0.date >= todayIso && $0.date <= limit }
-
         VStack(alignment: .leading, spacing: 4) {
             Text("Ciao \(model.name.firstWord.pretty)").font(.largeTitle.weight(.bold))
             Text(longDate(todayIso)).foregroundStyle(.subtle)
@@ -100,19 +85,6 @@ struct TodayView: View {
 
         }
 
-        Header(text: "La giornata")
-        DayStrip(days: days, selected: $selected) { d in
-            let iso = Day.iso(d)
-            return lessons.contains { $0.date == iso } || agenda.contains { $0.date == iso } || grades.contains { $0.date.hasPrefix(iso) }
-                || absences.contains { $0.date.hasPrefix(iso) } || model.myReminders.contains { $0.date == iso }
-        }
-        DayContent(day: selected, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
-                   reminders: model.myReminders.filter { $0.date == Day.iso(selected) },
-                   onAdd: { addingFor = selected }, onRemove: { model.reminders.remove($0) })
-            .id(selected)
-            .transition(.opacity)
-            .daySwipe(days, $selected)
-
         Group {
         Header(text: "Ultimi voti", action: "Tutti") { model.tab = .grades }
         if grades.isEmpty {
@@ -149,6 +121,52 @@ struct TodayView: View {
         .buttonStyle(.plain)
         .padding(.top, 10)
         }
+    }
+}
+
+/// La giornata: striscia dei giorni e tutto quello che riguarda il giorno scelto.
+struct DayView: View {
+    @Environment(Model.self) private var model
+
+    private let days: [Date] = (-14...14).map { Day.add(Day.today, $0) }.filter { !Day.isSunday($0) }
+    @State private var selected: Date = (-14...14).map { Day.add(Day.today, $0) }.first { !Day.isSunday($0) && $0 >= Day.today } ?? Day.today
+    @State private var addingFor: Date?
+    @State private var reminderText = ""
+
+    var body: some View {
+        Screen(refresh: { await model.loadAll() }) {
+            Loaded(model.lessons, model.grades, model.agenda, model.absences) { content }
+        }
+        .alert("Promemoria", isPresented: Binding(get: { addingFor != nil }, set: { if !$0 { addingFor = nil } })) {
+            TextField("Es. portare il libro di disegno", text: $reminderText)
+            Button("Salva") {
+                if let day = addingFor { model.reminders.add(model.debugName != nil ? "debug" : (model.api.current ?? ""), Day.iso(day), reminderText) }
+                reminderText = ""
+            }
+            Button("Annulla", role: .cancel) { reminderText = "" }
+        } message: {
+            Text("\(addingFor.map { longDate(Day.iso($0)) } ?? "")\nResta solo su questo telefono.")
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        let lessons = model.lessons.data ?? []
+        let grades = model.grades.data ?? []
+        let agenda = model.agenda.data ?? []
+        let absences = model.absences.data ?? []
+        let teachers = Teachers(lessons)
+        DayStrip(days: days, selected: $selected) { d in
+            let iso = Day.iso(d)
+            return lessons.contains { $0.date == iso } || agenda.contains { $0.date == iso } || grades.contains { $0.date.hasPrefix(iso) }
+                || absences.contains { $0.date.hasPrefix(iso) } || model.myReminders.contains { $0.date == iso }
+        }
+        DayContent(day: selected, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
+                   reminders: model.myReminders.filter { $0.date == Day.iso(selected) },
+                   onAdd: { addingFor = selected }, onRemove: { model.reminders.remove($0) })
+            .id(selected)
+            .transition(.opacity)
+            .daySwipe(days, $selected)
+
     }
 }
 

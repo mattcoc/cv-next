@@ -43,7 +43,7 @@ final class Res<T>: Loadable {
     func ensure() async { if data == nil && !loading { await refresh() } }
 }
 
-enum AppTab: Hashable { case today, grades, notices, functions }
+enum AppTab: Hashable { case today, day, grades, notices, functions }
 
 /// Tutti i dati dell'account in uso.
 @MainActor @Observable

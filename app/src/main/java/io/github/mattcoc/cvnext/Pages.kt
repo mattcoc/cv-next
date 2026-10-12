@@ -1,5 +1,7 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -382,7 +384,8 @@ fun WebScreen(api: Api, title: String, url: String, onBack: () -> Unit) {
                     web = this
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().navigationBarsPadding().imePadding(),
+            onRelease = { it.destroy() }
         )
         if (ready && progress < 1f) LinearProgressIndicator({ progress }, Modifier.fillMaxWidth())
     }

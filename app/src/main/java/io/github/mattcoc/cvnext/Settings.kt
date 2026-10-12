@@ -1,5 +1,8 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.RecordVoiceOver
@@ -60,6 +63,8 @@ import androidx.compose.material.icons.rounded.Grade
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -149,6 +154,9 @@ class Settings(context: Context) {
 
     fun toggle(alert: Alert, on: Boolean) = save(if (on) alerts + alert else alerts - alert)
 
+    /** Notifiche spente apposta dall'interruttore generale: niente inviti ad attivarle. */
+    val optedOut: Boolean get() = alerts.isEmpty() && prefs.contains("alertsBefore")
+
     /** Interruttore generale: spegnendo ricorda la scelta, riaccendendo la ripristina. */
     fun toggleAll(on: Boolean) {
         if (on) save(read("alertsBefore")?.takeIf { it.isNotEmpty() } ?: Alert.entries.toSet())
@@ -228,7 +236,7 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
         val side = sideMargin(maxWidth, 680.dp)
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(side, 4.dp, side, 32.dp),
+            contentPadding = PaddingValues(side, 4.dp, side, 32.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item { Box(Modifier.appear(0)) { SectionTitle("Aspetto") } }
@@ -474,12 +482,21 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
     if (editingNames && account != null) NamesDialog(account) { editingNames = false }
     val context = LocalContext.current
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) pending?.invoke()
+    var allowed by remember { mutableStateOf(NotifyStatus.allowed(context)) }
+    var restricted by remember { mutableStateOf(Battery.restricted(context)) }
+    // Permessi e risparmio batteria si cambiano anche dalle impostazioni di sistema: al ritorno si rileggono.
+    LifecycleResumeEffect(Unit) {
+        allowed = NotifyStatus.allowed(context)
+        restricted = Battery.restricted(context)
+        onPauseOrDispose { }
+    }
+    // Anche se il permesso viene negato la scelta resta salvata: compare la riga per sbloccarle dalle impostazioni.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        pending?.invoke()
         pending = null
+        allowed = NotifyStatus.allowed(context)
         Notifier.schedule(context, settings.alerts)
     }
-    var restricted by remember { mutableStateOf(Battery.restricted(context)) }
     val battery = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { restricted = Battery.restricted(context) }
     val askBattery = { if (Battery.restricted(context)) runCatching { battery.launch(Battery.request(context)) } }
     val withPermission: (() -> Unit) -> Unit = { action ->
@@ -512,7 +529,15 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
                 }
             }
         )
-        if (any && restricted) {
+        if (any && !allowed) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+            SettingRow(
+                Icons.Rounded.NotificationsOff, "Notifiche bloccate da Android",
+                "Tocca e attiva \"Consenti notifiche\" per CV Next",
+                accent = true, onClick = { Battery.open(context, NotifyStatus.settings(context)) }, trailing = { Chevron() }
+            )
+        }
+        if (any && allowed && restricted) {
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
             SettingRow(
                 Icons.Rounded.BatteryAlert, "Le notifiche possono non arrivare",

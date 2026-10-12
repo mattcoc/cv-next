@@ -1,5 +1,7 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -169,7 +171,7 @@ private fun NavItem(s: Section, sel: Boolean, modifier: Modifier, onSelect: (Sec
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            s.label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false,
+            s.label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
             color = if (sel) c.onSurface else c.onSurfaceVariant,
             fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium
         )
@@ -188,7 +190,8 @@ fun SideRail(selected: Section, modifier: Modifier = Modifier, onSelect: (Sectio
         shadowElevation = barElevation(style),
         border = styleBorder()
     ) {
-        Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Telefono in orizzontale: lo spazio in altezza è poco, la barra scorre
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Section.entries.filter { it.inBar }.forEach { s -> NavItem(s, s == selected, Modifier.fillMaxWidth().height(72.dp), onSelect) }
         }
     }

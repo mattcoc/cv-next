@@ -15,7 +15,6 @@ import androidx.compose.material.icons.rounded.Quiz
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.IconButton
@@ -227,12 +226,9 @@ fun IconCircle(icon: ImageVector, bg: Color, fg: Color, modifier: Modifier = Mod
     contentAlignment = Alignment.Center
 ) { Icon(icon, null, tint = fg) }
 
-/** Vero se il tema dell'app è scuro: segue la scelta nelle impostazioni, non solo quella del telefono. */
-fun androidx.compose.material3.ColorScheme.isDark() = surface.luminance() < 0.5f
-
 @Composable
 fun gradeColors(value: Double?, counts: Boolean = true): Pair<Color, Color> {
-    val dark = MaterialTheme.colorScheme.isDark()
+    val dark = LocalDark.current
     val c = MaterialTheme.colorScheme
     return when {
         !counts -> if (dark) Color(0xFF9ECAFF) to Color(0xFF003258) else Color(0xFF1565C0) to Color.White
@@ -245,7 +241,7 @@ fun gradeColors(value: Double?, counts: Boolean = true): Pair<Color, Color> {
 /** Colori della scheda della media: dipendono dal voto, non dal colore del tema (un tema rosso non deve sembrare un'insufficienza). */
 @Composable
 fun averageCardColors(avg: Double?): Pair<Color, Color> {
-    val dark = MaterialTheme.colorScheme.isDark()
+    val dark = LocalDark.current
     val c = MaterialTheme.colorScheme
     return when {
         avg == null -> c.surfaceContainerHigh to c.onSurface
@@ -289,7 +285,7 @@ fun gradeTypeIcon(type: String): ImageVector? {
 @Composable
 fun absenceStyle(type: String): Triple<String, Color, Color> {
     // Colori fissi, uguali con ogni tema: rosso, arancio, blu e giallo come nel registro.
-    val dark = MaterialTheme.colorScheme.isDark()
+    val dark = LocalDark.current
     fun pick(light: Long, onLight: Long, darkBg: Long, onDark: Long) = if (dark) Color(darkBg) to Color(onDark) else Color(light) to Color(onLight)
     val (letter, colors) = when (type) {
         "Assenza" -> "A" to pick(0xFFFFDAD6, 0xFF410002, 0xFF93000A, 0xFFFFDAD6)

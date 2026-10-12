@@ -21,6 +21,8 @@ object Updater {
 
     suspend fun latest(): Release = withContext(Dispatchers.IO) {
         val c = URI(Endpoints.RELEASES).toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
         c.setRequestProperty("Accept", "application/vnd.github+json")
         val code = c.responseCode
         val body = (if (code < 400) c.inputStream else c.errorStream)?.use { String(it.readBytes()) }.orEmpty()
@@ -68,6 +70,8 @@ object Updater {
         val dir = File(context.cacheDir, "updates").apply { deleteRecursively(); mkdirs() }
         val file = File(dir, "cv-next-${release.version}.apk")
         val c = URI(release.apkUrl).toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
         try {
             if (c.responseCode != 200) throw ApiException("Download non riuscito (errore ${c.responseCode})")
             val total = c.contentLengthLong.takeIf { it > 0 } ?: release.size

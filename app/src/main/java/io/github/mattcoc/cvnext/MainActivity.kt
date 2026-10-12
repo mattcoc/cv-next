@@ -1,5 +1,7 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -98,6 +100,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -168,6 +172,17 @@ class MainActivity : ComponentActivity() {
                             else FloatingNavBar(Section.Giornata, Modifier.align(Alignment.BottomCenter)) {}
                             if (debugScreen == "guide") GuideOverlay({}, start = 2) {}
                         }
+                        "invite" -> Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.statusBarsPadding().padding(start = if (LocalWide.current) 100.dp else 0.dp)) {
+                                TodayScreen(
+                                    "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
+                                    DebugData.absences, emptyList(), {}, {}, null, {}, {}
+                                ) {}
+                            }
+                            if (LocalWide.current) SideRail(Section.Oggi, Modifier.statusBarsPadding()) {}
+                            else FloatingNavBar(Section.Oggi, Modifier.align(Alignment.BottomCenter)) {}
+                            NotificationInvite(settings) {}
+                        }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
                         "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
@@ -231,6 +246,9 @@ fun App(api: Api, settings: Settings, target: MutableState<String?>, targetAccou
     }
     var current by remember { mutableStateOf(api.current) }
     var adding by remember { mutableStateOf(false) }
+    val appScope = rememberCoroutineScope()
+    // Il widget mostra i compiti dell'account attivo: va aggiornato quando si cambia account.
+    val widget = { appScope.launch { runCatching { HomeworkWidget.refresh(appContext) } }; Unit }
     LaunchedEffect(targetAccount.value) {
         targetAccount.value?.let { key ->
             if (key != current && api.accounts.any { it.key == key }) {
@@ -246,13 +264,13 @@ fun App(api: Api, settings: Settings, target: MutableState<String?>, targetAccou
         transitionSpec = { (fadeIn(tween(400)) + scaleIn(initialScale = 0.92f)) togetherWith (fadeOut(tween(200)) + scaleOut(targetScale = 1.05f)) },
         label = "app"
     ) { s ->
-        if (s == "login") Login(api, if (current != null) ({ adding = false }) else null) { adding = false; current = api.current }
+        if (s == "login") Login(api, if (current != null) ({ adding = false }) else null) { adding = false; current = api.current; widget() }
         else key(s) {
             Home(
-                api, settings, target,
-                onSwitch = { api.switchTo(it); current = it },
+                api, settings, target, targetAccount.value,
+                onSwitch = { api.switchTo(it); current = it; widget() },
                 onAdd = { adding = true },
-                onLogout = { api.logout(); current = api.current }
+                onLogout = { api.logout(); current = api.current; widget() }
             )
         }
     }
@@ -316,7 +334,7 @@ fun Login(api: Api, onBack: (() -> Unit)?, onDone: () -> Unit) {
         onBack?.let { IconButton(it, Modifier.padding(8.dp)) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Indietro") } }
         // Sui tablet il modulo resta largo come su un telefono, al centro
         Column(
-            Modifier.fillMaxHeight().widthIn(max = 480.dp).fillMaxWidth().align(Alignment.TopCenter).padding(24.dp),
+            Modifier.fillMaxHeight().widthIn(max = 480.dp).fillMaxWidth().align(Alignment.TopCenter).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
         ) {
             Text("CV Next", Modifier.appear(0), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -369,20 +387,24 @@ class Res<T>(private val load: suspend () -> T) {
     suspend fun refresh() {
         loading = true
         error = null
-        if (data == null) try {
-            data = withContext(CacheOnly) { load() }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-        }
+        // Se il caricamento viene annullato (si cambia schermata) non deve restare la rotellina per sempre.
         try {
-            data = load()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            error = e.text()
+            if (data == null) try {
+                data = withContext(CacheOnly) { load() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+            try {
+                data = load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = e.text()
+            }
+        } finally {
+            loading = false
         }
-        loading = false
     }
 }
 
@@ -398,15 +420,15 @@ enum class Section(val label: String, val icon: ImageVector, val selected: Image
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: (String) -> Unit, onAdd: () -> Unit, onLogout: () -> Unit) {
+fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAccount: String?, onSwitch: (String) -> Unit, onAdd: () -> Unit, onLogout: () -> Unit) {
     var section by rememberSaveable { mutableStateOf(Section.Oggi) }
     var agendaFilter by rememberSaveable { mutableStateOf("Tutto") }
     var menu by remember { mutableStateOf(false) }
     val stack = remember { mutableStateListOf<Page>() }
     var depth by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
-    val today = remember { LocalDate.now() }
-    val lessons = remember { Res { api.lessons(today.minusDays(30), today) } }
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    val lessons = remember { Res { LocalDate.now().let { api.lessons(it.minusDays(30), it) } } }
     val grades = remember { Res { api.grades() } }
     val agenda = remember { Res { api.agenda() } }
     val absences = remember { Res { api.absences() } }
@@ -417,20 +439,29 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
     val periods = remember { Res { api.periods() } }
     val school = remember { Res { api.school() } }
     val payments = remember { Res { api.payments() } }
-    LaunchedEffect(Unit) { listOf(lessons, grades, agenda, absences, notices, periods, school, payments).forEach { launch { it.refresh() } } }
+    val loadAll = { listOf(lessons, grades, agenda, absences, notices, periods, school, payments).forEach { scope.launch { it.refresh() } } }
+    var loadedAt by remember { mutableLongStateOf(0L) }
+    // All'apertura e quando si torna sull'app dopo un po' (o il giorno dopo) i dati si ricaricano e "oggi" si aggiorna.
+    LifecycleResumeEffect(Unit) {
+        val now = System.currentTimeMillis()
+        if (LocalDate.now() != today || now - loadedAt > 15 * 60_000L) {
+            today = LocalDate.now()
+            loadedAt = now
+            loadAll()
+        }
+        onPauseOrDispose { }
+    }
     val context = LocalContext.current
     var update by remember { mutableStateOf<Release?>(null) }
     val reminders = remember { ReminderStore(context) }
     LaunchedEffect(Unit) { if (settings.autoUpdate) update = Updater.dailyCheck(context) }
-    // Chi ha già le notifiche attive ma il risparmio batteria le blocca: chiede una volta di lasciar lavorare l'app in background.
-    LaunchedEffect(settings.guideDone) {
-        val prefs = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
-        if (settings.guideDone && settings.alerts.isNotEmpty() && Battery.restricted(context) && !prefs.getBoolean("batteryAsked", false)) {
-            prefs.edit().putBoolean("batteryAsked", true).apply()
-            runCatching { context.startActivity(Battery.request(context)) }
-        }
-    }
-    LaunchedEffect(target.value) {
+    // Finita la guida, invita ad attivare le notifiche se manca qualcosa (permesso, risparmio batteria).
+    var invite by remember { mutableStateOf(false) }
+    LaunchedEffect(settings.guideDone) { if (settings.guideDone) invite = Invite.due(context, settings) }
+    // Da una notifica di un altro account: la sezione la apre la Home di quell'account, dopo il cambio.
+    val mine = remember { api.current }
+    LaunchedEffect(target.value, pendingAccount) {
+        if (pendingAccount != null || api.current != mine) return@LaunchedEffect
         target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
         target.value = null
     }
@@ -467,7 +498,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                     },
                     label = "section"
                 ) { s ->
-                    when (s) {
+                    key(today) { when (s) {
                         Section.Oggi -> Refreshable(lessons, grades, agenda, absences) {
                             TodayScreen(
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
@@ -489,7 +520,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                             if (it == Section.Agenda) agendaFilter = "Tutto"
                             section = it
                         }
-                    }
+                    } }
                 }
                 if (wide) SideRail(section, Modifier.align(Alignment.TopStart)) { section = it }
                 else FloatingNavBar(section, Modifier.align(Alignment.BottomCenter)) { section = it }
@@ -522,6 +553,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
         }
         if (!settings.guideDone) GuideOverlay({ stack.clear(); section = it }) { settings.updateGuide(true) }
     }
+    if (invite) NotificationInvite(settings) { invite = false }
     if (menu) AccountSheet(
         api, school.data, { menu = false }, { menu = false; onSwitch(it) }, { menu = false; onAdd() },
         { menu = false; onLogout() }

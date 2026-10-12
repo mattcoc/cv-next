@@ -1,5 +1,7 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -61,7 +63,7 @@ import androidx.compose.ui.unit.dp
 
 private const val YEAR = -1
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
     val periods = remember(all, apiPeriods) {
@@ -147,7 +149,7 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
                                 )
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { list.take(5).forEach { GradeChip(it) } }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), maxLines = 1) { list.take(5).forEach { GradeChip(it) } }
                     }
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

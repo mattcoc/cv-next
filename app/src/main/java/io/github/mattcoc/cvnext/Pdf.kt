@@ -103,26 +103,43 @@ class PdfDoc(val file: File) : Closeable {
     private val renderer = PdfRenderer(fd)
     private val mutex = Mutex()
     val count = renderer.pageCount
+    @Volatile private var closed = false
+    private var released = false
+
+    // Chiamata sempre con il lucchetto preso: il renderer non si chiude mentre disegna una pagina.
+    private fun release() {
+        if (released) return
+        released = true
+        runCatching { renderer.close() }
+        runCatching { fd.close() }
+    }
 
     suspend fun render(index: Int, width: Int): Bitmap = mutex.withLock {
-        withContext(Dispatchers.IO) {
-            val safeWidth = width.coerceAtLeast(100)
-            val page = renderer.openPage(index)
-            try {
-                val targetHeight = (safeWidth * page.height / page.width.coerceAtLeast(1)).coerceAtLeast(100)
-                Bitmap.createBitmap(safeWidth, targetHeight, Bitmap.Config.ARGB_8888).apply {
-                    eraseColor(android.graphics.Color.WHITE)
-                    page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+        if (closed) throw kotlinx.coroutines.CancellationException("PDF chiuso")
+        try {
+            withContext(Dispatchers.IO) {
+                val safeWidth = width.coerceAtLeast(100)
+                val page = renderer.openPage(index)
+                try {
+                    // Pagine lunghissime (scansioni): altezza limitata per non esaurire la memoria
+                    val targetHeight = (safeWidth * page.height / page.width.coerceAtLeast(1)).coerceIn(100, 8_000_000 / safeWidth)
+                    Bitmap.createBitmap(safeWidth, targetHeight, Bitmap.Config.ARGB_8888).apply {
+                        eraseColor(android.graphics.Color.WHITE)
+                        page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    }
+                } finally {
+                    page.close()
                 }
-            } finally {
-                page.close()
             }
+        } finally {
+            if (closed) release()
         }
     }
 
+    /** Se una pagina è in disegno, la chiusura avviene appena finisce. */
     override fun close() {
-        renderer.close()
-        fd.close()
+        closed = true
+        if (mutex.tryLock()) try { release() } finally { mutex.unlock() }
     }
 }
 

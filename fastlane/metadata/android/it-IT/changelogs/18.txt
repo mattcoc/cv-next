@@ -1,0 +1,8 @@
+• Nuovo invito per attivare le notifiche: ti guida passo passo tra permesso, risparmio batteria e avvio automatico
+• Avviso nelle impostazioni quando Android blocca le notifiche
+• I dati si aggiornano da soli quando torni sull'app, e "oggi" cambia anche se l'app è rimasta aperta di notte
+• Corretta la rotellina di caricamento che a volte non spariva
+• Accesso: il modulo ora scorre con la tastiera aperta
+• Liquid Glass chiaro: colori corretti per medie, voti e assenze
+• Correzioni grafiche: voti nelle materie, barra laterale in orizzontale, pagine web e impostazioni sopra i tasti di sistema
+• Allegati PDF più stabili, connessioni con tempo massimo, promemoria della sera all'ora giusta

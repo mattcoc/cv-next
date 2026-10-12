@@ -88,7 +88,8 @@ object Evening {
             val request = PeriodicWorkRequestBuilder<EveningWorker>(24, TimeUnit.HOURS)
                 .setInitialDelay(Duration.between(now, next).toMinutes(), TimeUnit.MINUTES)
                 .build()
-            wm.enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.UPDATE, request)
+            // UPDATE terrebbe il vecchio orario: si riprogramma da capo per l'ora scelta
+            wm.enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request)
         }
     }
 

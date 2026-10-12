@@ -164,6 +164,8 @@ class Api(context: Context, private val fixed: String? = null) {
         requireOnline()
         webSession()
         val c = URI(url).toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
         c.setRequestProperty("Cookie", CookieManager.getInstance().getCookie(Endpoints.WEB).orEmpty())
         val code = c.responseCode
         val stream = if (code < 400) c.inputStream else c.errorStream
@@ -177,6 +179,8 @@ class Api(context: Context, private val fixed: String? = null) {
         requireOnline()
         val acc = account() ?: return@withContext false
         val c = URI(Endpoints.WEB_LOGIN).toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
         c.requestMethod = "POST"
         c.doOutput = true
         c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
@@ -200,6 +204,8 @@ class Api(context: Context, private val fixed: String? = null) {
 
     private fun raw(method: String, path: String, body: String?, token: String?): Pair<Int, ByteArray> {
         val c = URI("${Endpoints.REST}$path").toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
         c.requestMethod = method
         c.setRequestProperty("User-Agent", Endpoints.USER_AGENT)
         c.setRequestProperty("Z-Dev-Apikey", Endpoints.API_KEY)

@@ -9,6 +9,12 @@ on:
       extras:
         description: 'Opzioni in più, es. --es debugSeed Rosso --ei debugMode 2'
         default: ''
+      styles:
+        description: 'Stili da fotografare (0 Material, 1 Liquid Glass, 2 One UI, 3 HyperOS, 4 Nothing OS)'
+        default: '0'
+
+permissions:
+  contents: write
 
 jobs:
   screenshot:
@@ -45,20 +51,21 @@ jobs:
           disable-animations: true
           script: |
             adb install -r app.apk
-            for screen in ${{ github.event.inputs.screen || 'settings' }}; do adb shell am start -S -n io.github.mattcoc.cvnext/io.github.mattcoc.cvnext.MainActivity --es debugScreen $screen ${{ github.event.inputs.extras }}; sleep 10; adb exec-out screencap -p > ${screen}_1.png; adb shell input swipe 540 1900 540 600 400; sleep 3; adb exec-out screencap -p > ${screen}_2.png; done
+            for style in ${{ github.event.inputs.styles || '0' }}; do for screen in ${{ github.event.inputs.screen || 'settings' }}; do n=${screen}_s${style}; adb shell am start -S -n io.github.mattcoc.cvnext/io.github.mattcoc.cvnext.MainActivity --es debugScreen $screen --ei debugStyle $style ${{ github.event.inputs.extras }}; sleep 10; adb exec-out screencap -p > ${n}_1.png; adb shell input swipe 540 1900 540 600 400; sleep 3; adb exec-out screencap -p > ${n}_2.png; done; done
             adb logcat -d -b crash
 
-      - name: Stampa gli screenshot nel log
+      # Pre-release a parte, così l'aggiornamento in-app (releases/latest) non la vede.
+      - name: Pubblica gli screenshot
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           pip install --quiet pillow
           for p in *_1.png *_2.png; do
-            f=${p%.png}
-            python3 -c "from PIL import Image; im=Image.open('$f.png').convert('RGB'); im.resize((540, im.height*540//im.width)).save('$f.jpg', quality=85)"
-            echo "=== BEGIN $f ==="
-            base64 -w 0 $f.jpg
-            echo
-            echo "=== END $f ==="
+            python3 -c "from PIL import Image; im=Image.open('$p').convert('RGB'); im.resize((540, im.height*540//im.width)).save('${p%.png}.jpg', quality=80)"
           done
+          gh release view android-screens >/dev/null 2>&1 || gh release create android-screens --prerelease --latest=false \
+            --title "Screenshot Android" --notes "Schermate generate dal workflow Screenshot, non è una versione dell'app."
+          gh release upload android-screens *.jpg --clobber
 
       - uses: actions/upload-artifact@v4
         with:

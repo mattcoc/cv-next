@@ -9,6 +9,7 @@ import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -138,21 +139,29 @@ class MainActivity : ComponentActivity() {
         val debuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         val debugScreen = if (debuggable) intent?.getStringExtra("debugScreen") else null
         if (debuggable) intent?.getIntExtra("debugMode", -1)?.takeIf { it >= 0 }?.let { settings.update(mode = it) }
+        if (debuggable) intent?.getIntExtra("debugStyle", -1)?.let { AppStyle.entries.getOrNull(it) }?.let { settings.updateStyle(it) }
         if (debuggable) intent?.getStringExtra("debugSeed")?.let { name -> seeds.firstOrNull { it.second == name }?.let { settings.update(seed = it.first) } }
         setContent {
             AppTheme(settings) {
-                Surface(Modifier.fillMaxSize()) {
+                Backdrop(Modifier.fillMaxSize()) {
                     when (debugScreen) {
                         "settings" -> SettingsScreen(settings) { finish() }
                         "grades" -> Box(Modifier.statusBarsPadding()) { GradesScreen(DebugData.grades, DebugData.periods) }
-                        "today" -> Box(Modifier.statusBarsPadding()) {
-                            TodayScreen(
-                                "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
-                                DebugData.absences, emptyList(), {}, {}, null, {}, {}
-                            ) {}
+                        "today" -> Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.statusBarsPadding()) {
+                                TodayScreen(
+                                    "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
+                                    DebugData.absences, emptyList(), {}, {}, null, {}, {}
+                                ) {}
+                            }
+                            FloatingNavBar(Section.Oggi, Modifier.align(Alignment.BottomCenter)) {}
                         }
-                        "day" -> Box(Modifier.statusBarsPadding()) {
-                            DayScreen(DebugData.lessons, DebugData.grades, DebugData.agenda, DebugData.absences, DebugData.reminders)
+                        "day", "guide" -> Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.statusBarsPadding()) {
+                                DayScreen(DebugData.lessons, DebugData.grades, DebugData.agenda, DebugData.absences, DebugData.reminders)
+                            }
+                            FloatingNavBar(Section.Giornata, Modifier.align(Alignment.BottomCenter)) {}
+                            if (debugScreen == "guide") GuideOverlay({}, start = 2) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
@@ -180,9 +189,10 @@ fun AppTheme(settings: Settings, content: @Composable () -> Unit) {
     }
     val context = LocalContext.current
     val seeded = rememberDynamicColorScheme(Color(if (settings.seed == 0) seeds[1].first else settings.seed), dark, false)
-    val colors = if (settings.seed == 0 && Build.VERSION.SDK_INT >= 31) {
+    val base = if (settings.seed == 0 && Build.VERSION.SDK_INT >= 31) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else seeded
+    val colors = styledColors(settings.style, base, dark)
     val view = LocalView.current
     SideEffect {
         (view.context as? Activity)?.window?.let {
@@ -192,14 +202,9 @@ fun AppTheme(settings: Settings, content: @Composable () -> Unit) {
             }
         }
     }
-    val shapes = Shapes(
-        extraSmall = RoundedCornerShape(8.dp),
-        small = RoundedCornerShape(12.dp),
-        medium = RoundedCornerShape(20.dp),
-        large = RoundedCornerShape(28.dp),
-        extraLarge = RoundedCornerShape(32.dp)
-    )
-    MaterialTheme(colorScheme = colors, shapes = shapes, content = content)
+    MaterialTheme(colorScheme = colors, shapes = styledShapes(settings.style), typography = styledTypography(settings.style)) {
+        CompositionLocalProvider(LocalStyle provides settings.style, LocalDark provides dark, content = content)
+    }
 }
 
 @Composable
@@ -482,7 +487,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
             },
             label = "page"
         ) { p ->
-            if (p != null) Surface(Modifier.fillMaxSize()) {
+            if (p != null) Backdrop(Modifier.fillMaxSize()) {
                 when (p) {
                     is Page.NoticePage -> NoticeScreen(api, p.notice) { back(); scope.launch { notices.refresh() } }
                     is Page.FilePage -> FileScreen(p.title, p.file, back)
@@ -496,6 +501,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                 }
             }
         }
+        if (!settings.guideDone) GuideOverlay({ stack.clear(); section = it }) { settings.updateGuide(true) }
     }
     if (menu) AccountSheet(
         api, school.data, { menu = false }, { menu = false; onSwitch(it) }, { menu = false; onAdd() },

@@ -69,7 +69,6 @@ import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Swipe
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api

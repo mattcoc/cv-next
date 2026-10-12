@@ -21,6 +21,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -110,6 +114,20 @@ class Settings(context: Context) {
         private set
     var eveningHour by mutableIntStateOf(prefs.getInt("eveningHour", 19))
         private set
+    var style by mutableStateOf(AppStyle.entries.firstOrNull { it.name == prefs.getString("style", null) } ?: AppStyle.Material)
+        private set
+    var guideDone by mutableStateOf(prefs.getBoolean("guideDone", false))
+        private set
+
+    fun updateStyle(style: AppStyle) {
+        this.style = style
+        prefs.edit().putString("style", style.name).apply()
+    }
+
+    fun updateGuide(done: Boolean) {
+        guideDone = done
+        prefs.edit().putBoolean("guideDone", done).apply()
+    }
 
     fun updateEvening(on: Boolean = evening, hour: Int = eveningHour) {
         evening = on
@@ -227,6 +245,8 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
                         SettingRow(Icons.Rounded.BugReport, "Segnala un problema", "Apre una segnalazione su GitHub", onClick = { openLink(context, issueUrl(context)) }, trailing = { Chevron() })
                         RowDivider()
                         SettingRow(Icons.Rounded.PrivacyTip, "Privacy", "Cosa salva l'app e con chi comunica", onClick = { privacy = true }, trailing = { Chevron() })
+                        RowDivider()
+                        SettingRow(Icons.Rounded.Lightbulb, "Rivedi la guida", "Dove trovare le funzioni dell'app", onClick = { settings.updateGuide(false); onBack() }, trailing = { Chevron() })
                     }
                 }
             }
@@ -258,7 +278,8 @@ private fun SectionTitle(text: String) = Text(
 
 @Composable
 private fun Group(content: @Composable () -> Unit) = Column(
-    Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainerLow).animateContentSize()
+    Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(panelColor())
+        .then(styleBorder()?.let { Modifier.border(it, MaterialTheme.shapes.large) } ?: Modifier).animateContentSize()
 ) { content() }
 
 @Composable
@@ -282,7 +303,8 @@ private fun SettingRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (accent) c.primaryContainer else c.surfaceContainerHighest),
+            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                .background(if (accent) c.primaryContainer else if (LocalStyle.current == AppStyle.Material) c.surfaceContainerHighest else c.secondaryContainer),
             contentAlignment = Alignment.Center
         ) { Icon(icon, null, Modifier.size(22.dp), tint = if (accent) c.onPrimaryContainer else c.onSurfaceVariant) }
         Spacer(Modifier.width(16.dp))
@@ -306,7 +328,35 @@ private fun CheckSwitch(on: Boolean, onChange: (Boolean) -> Unit) = Switch(
 private fun AppearanceCard(settings: Settings) {
     val c = MaterialTheme.colorScheme
     Group {
-        Text("Tema", Modifier.padding(16.dp, 16.dp, 16.dp, 10.dp), style = MaterialTheme.typography.bodyLarge)
+        Text("Stile", Modifier.padding(16.dp, 16.dp, 16.dp, 10.dp), style = MaterialTheme.typography.bodyLarge)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            AppStyle.entries.forEach { s ->
+                val sel = settings.style == s
+                Column(
+                    Modifier.width(92.dp).clip(MaterialTheme.shapes.medium).selectable(sel, role = Role.RadioButton) { settings.updateStyle(s) }.padding(bottom = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StyleMini(
+                        s, Modifier.fillMaxWidth().height(120.dp).clip(MaterialTheme.shapes.medium)
+                            .border(if (sel) 2.dp else 1.dp, if (sel) c.primary else c.outlineVariant, MaterialTheme.shapes.medium)
+                    )
+                    Text(
+                        s.label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                        color = if (sel) c.primary else c.onSurfaceVariant, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+        Text(
+            settings.style.description, Modifier.padding(16.dp, 4.dp, 16.dp, 0.dp),
+            style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant
+        )
+        HorizontalDivider(Modifier.padding(16.dp, 12.dp), color = c.surfaceContainerHigh)
+        Text("Tema", Modifier.padding(16.dp, 0.dp, 16.dp, 10.dp), style = MaterialTheme.typography.bodyLarge)
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             listOf("Sistema", "Chiaro", "Scuro").forEachIndexed { i, label ->
                 val sel = settings.mode == i
@@ -332,31 +382,70 @@ private fun AppearanceCard(settings: Settings) {
                 }
             }
         }
-        HorizontalDivider(Modifier.padding(16.dp, 12.dp), color = c.surfaceContainerHigh)
-        Text("Colore", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyLarge)
-        if (Build.VERSION.SDK_INT >= 31) FilterChip(
-            settings.seed == 0, { settings.update(seed = 0) }, { Text("Dallo sfondo") },
-            Modifier.padding(horizontal = 16.dp),
-            leadingIcon = { Icon(if (settings.seed == 0) Icons.Rounded.Check else Icons.Rounded.Wallpaper, null, Modifier.size(18.dp)) }
-        )
-        // Cerchi da 44 dp (area minima da toccare) che vanno a capo sugli schermi stretti.
-        FlowRow(
-            Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            seeds.filter { it.first != 0 }.forEach { (seed, label) ->
-                val sel = settings.seed == seed
-                Box(
-                    Modifier.size(44.dp)
-                        .then(if (sel) Modifier.border(2.dp, Color(seed), CircleShape).padding(4.dp) else Modifier)
-                        .clip(CircleShape).background(Color(seed))
-                        .selectable(sel, role = Role.RadioButton) { settings.update(seed = seed) }
-                        .semantics { contentDescription = label },
-                    contentAlignment = Alignment.Center
-                ) { if (sel) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+        if (settings.style.ownColors) Spacer(Modifier.height(16.dp)) else Column {
+            HorizontalDivider(Modifier.padding(16.dp, 12.dp), color = c.surfaceContainerHigh)
+            Text("Colore", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyLarge)
+            if (Build.VERSION.SDK_INT >= 31) FilterChip(
+                settings.seed == 0, { settings.update(seed = 0) }, { Text("Dallo sfondo") },
+                Modifier.padding(horizontal = 16.dp),
+                leadingIcon = { Icon(if (settings.seed == 0) Icons.Rounded.Check else Icons.Rounded.Wallpaper, null, Modifier.size(18.dp)) }
+            )
+            // Cerchi da 44 dp (area minima da toccare) che vanno a capo sugli schermi stretti.
+            FlowRow(
+                Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                seeds.filter { it.first != 0 }.forEach { (seed, label) ->
+                    val sel = settings.seed == seed
+                    Box(
+                        Modifier.size(44.dp)
+                            .then(if (sel) Modifier.border(2.dp, Color(seed), CircleShape).padding(4.dp) else Modifier)
+                            .clip(CircleShape).background(Color(seed))
+                            .selectable(sel, role = Role.RadioButton) { settings.update(seed = seed) }
+                            .semantics { contentDescription = label },
+                        contentAlignment = Alignment.Center
+                    ) { if (sel) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+                }
             }
         }
+    }
+}
+
+/** Anteprima in miniatura di uno stile, sempre in chiaro tranne Nothing. */
+@Composable
+private fun StyleMini(style: AppStyle, modifier: Modifier) {
+    val (bg, card, accent) = when (style) {
+        AppStyle.Material -> Triple(Color(0xFFFBF8FF), Color(0xFFDDE1FF), Color(0xFF3949AB))
+        AppStyle.Glass -> Triple(Color(0xFFE9E6FF), Color.White.copy(alpha = 0.6f), Color(0xFF5B5BD6))
+        AppStyle.OneUI -> Triple(Color(0xFFF4F4F6), Color.White, Color(0xFF0072DE))
+        AppStyle.HyperOS -> Triple(Color(0xFFF7F7F7), Color.White, Color(0xFF0D84FF))
+        AppStyle.Nothing -> Triple(Color.Black, Color(0xFF1B1B1B), Color(0xFFD71921))
+    }
+    val radius = when (style) { AppStyle.Nothing -> 5.dp; AppStyle.Material -> 6.dp; else -> 9.dp }
+    Column(
+        modifier.background(bg).then(
+            if (style == AppStyle.Glass) Modifier.background(Brush.linearGradient(listOf(Color(0xFFB9C3FF), Color(0xFFF6C6E8), Color(0xFFBDE8F5)))) else Modifier
+        ).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // One UI tiene il titolo grande e in basso, con spazio sopra
+        if (style == AppStyle.OneUI) Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth(if (style == AppStyle.OneUI) 0.7f else 0.5f).height(if (style == AppStyle.OneUI) 10.dp else 7.dp).clip(CircleShape).background(if (style == AppStyle.Nothing) Color.White else Color(0xFF1B1B1F)))
+        repeat(2) {
+            Row(
+                Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(radius)).background(card)
+                    .then(if (style == AppStyle.Glass) Modifier.border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(radius)) else Modifier)
+                    .padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
+                Spacer(Modifier.width(5.dp))
+                Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(if (style == AppStyle.Nothing) Color(0xFF555555) else Color(0xFFBDBDC4)))
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(card)
+            .then(if (style == AppStyle.Nothing) Modifier.border(1.dp, Color(0xFF333333), CircleShape) else Modifier))
     }
 }
 

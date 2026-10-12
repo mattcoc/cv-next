@@ -132,18 +132,22 @@ fun ExpandableText(text: String, color: Color = MaterialTheme.colorScheme.onSurf
 @Composable
 fun FloatingNavBar(selected: Section, modifier: Modifier = Modifier, onSelect: (Section) -> Unit) {
     val c = MaterialTheme.colorScheme
+    val style = LocalStyle.current
     Surface(
         modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
         shape = MaterialTheme.shapes.extraLarge,
-        color = c.surfaceContainer,
-        tonalElevation = 3.dp,
-        shadowElevation = 10.dp
+        color = barColor(),
+        tonalElevation = if (style == AppStyle.Material) 3.dp else 0.dp,
+        shadowElevation = barElevation(style),
+        border = styleBorder()
     ) {
         Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Section.entries.filter { it.inBar }.forEach { s ->
                 val sel = s == selected
                 val pill by animateFloatAsState(if (sel) 1f else 0f, spring(0.75f, 600f), label = "pill")
-                val fg by animateColorAsState(if (sel) c.onSecondaryContainer else c.onSurfaceVariant, label = "fg")
+                val fg by animateColorAsState(
+                    if (sel && style == AppStyle.Nothing) c.primary else if (sel) c.onSecondaryContainer else c.onSurfaceVariant, label = "fg"
+                )
                 val source = remember { MutableInteractionSource() }
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clickable(source, null) { onSelect(s) },

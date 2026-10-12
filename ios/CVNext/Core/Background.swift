@@ -67,7 +67,7 @@ enum Background {
 
     static func schedule() {
         let request = BGAppRefreshTaskRequest(identifier: id)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 3600)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         try? BGTaskScheduler.shared.submit(request)
     }
 
@@ -93,8 +93,18 @@ enum Checker {
         for account in accounts {
             let api = Api(fixed: account.key)
             let who = accounts.count > 1 ? "\(account.name.firstWord.pretty) · " : ""
-            for alert in AlertKind.allCases where enabled.contains(alert) {
-                guard let items = try? await fetch(api, alert, account) else { continue }
+            // In background iOS concede pochi secondi: le richieste partono tutte insieme invece che una alla volta.
+            let results = await withTaskGroup(of: (AlertKind, [(String, String)]?).self) { group in
+                for alert in AlertKind.allCases where enabled.contains(alert) {
+                    // Sul main actor: lo stato dell'Api resta su un solo thread, ma le attese di rete si sovrappongono.
+                    group.addTask { @MainActor in (alert, try? await fetch(api, alert, account)) }
+                }
+                var all: [AlertKind: [(String, String)]] = [:]
+                for await (alert, items) in group { if let items { all[alert] = items } }
+                return all
+            }
+            for alert in AlertKind.allCases {
+                guard let items = results[alert] else { continue }
                 let key = "seen-\(alert.rawValue)-\(account.key)"
                 if let seen = defaults.stringArray(forKey: key).map(Set.init) {
                     for item in items.filter({ !seen.contains($0.0) }).prefix(5) {

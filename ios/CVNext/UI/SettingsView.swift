@@ -13,6 +13,9 @@ struct SettingsView: View {
     @State private var cleared = false
     @AppStorage("autoUpdate") private var autoUpdate = true
     @State private var updateState: UpdateState = .idle
+    @State private var refreshStatus = UIApplication.shared.backgroundRefreshStatus
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @Environment(\.scenePhase) private var phase
     @Environment(\.openURL) private var openURL
 
     private enum UpdateState: Equatable { case idle, checking, upToDate, available(IosRelease), failed(String) }
@@ -74,12 +77,23 @@ struct SettingsView: View {
                     HStack { Text("Controlla adesso"); Spacer(); if checking { ProgressView() } }
                 }
                 .disabled(checking || alerts.isEmpty)
+                if !alerts.isEmpty && (refreshStatus != .available || lowPower) {
+                    Button { if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) } } label: {
+                        Label {
+                            VStack(alignment: .leading) {
+                                Text("Le notifiche possono non arrivare").foregroundStyle(.primary)
+                                Text(lowPower ? "Con il risparmio energetico iOS non controlla in background." : "Attiva \"Aggiorna app in background\" per CV Next nelle Impostazioni di iOS.")
+                                    .font(.caption).foregroundStyle(.subtle)
+                            }
+                        } icon: { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                    }
+                }
             } header: {
                 Text("Notifiche")
             } footer: {
                 Text(lastCheck > 0
-                     ? "Ultimo controllo: \(Date(timeIntervalSince1970: lastCheck).formatted(date: .abbreviated, time: .shortened)). Su iOS è il sistema a decidere quando controllare: di solito qualche volta al giorno."
-                     : "Su iOS è il sistema a decidere quando controllare: di solito qualche volta al giorno, più spesso se usi l'app.")
+                     ? "Ultimo controllo: \(Date(timeIntervalSince1970: lastCheck).formatted(date: .abbreviated, time: .shortened)). Su iOS è il sistema a decidere quando controllare: di solito qualche volta al giorno. Non chiudere l'app dal multitasking: così iOS smette di controllare."
+                     : "Su iOS è il sistema a decidere quando controllare: di solito qualche volta al giorno, più spesso se usi l'app. Non chiudere l'app dal multitasking: così iOS smette di controllare.")
             }
 
             Section {
@@ -183,5 +197,9 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity)
         .background { AppBackground() }
         .navigationTitle("Impostazioni")
+        .onChange(of: phase) { _, p in
+            // Tornando dalle Impostazioni di iOS rilegge lo stato
+            if p == .active { refreshStatus = UIApplication.shared.backgroundRefreshStatus; lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
+        }
     }
 }

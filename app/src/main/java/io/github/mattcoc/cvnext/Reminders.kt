@@ -131,7 +131,7 @@ class EveningWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             val lines = dayEvents.map { e -> (if (e.isTest) "Verifica · " else "") + "${e.subject.ifBlank { e.author }}: ${e.notes}" } +
                 mine.map { "• ${it.text}" }
             val intent = Intent(ctx, MainActivity::class.java)
-                .putExtra("section", Section.Oggi.name).putExtra("account", account.key)
+                .putExtra("section", Section.Giornata.name).putExtra("account", account.key)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(ctx, "evening-${account.key}".hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val notification = NotificationCompat.Builder(ctx, Evening.CHANNEL)

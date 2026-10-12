@@ -406,19 +406,10 @@ fun TodayScreen(
     name: String, school: School?, lessons: List<Lesson>, grades: List<Grade>, agenda: List<Event>, absences: List<Absence>,
     payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit,
     update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit,
-    reminders: List<Reminder> = emptyList(), onAddReminder: (String, String) -> Unit = { _, _ -> }, onRemoveReminder: (Reminder) -> Unit = {},
     myNames: List<String> = emptyList(),
     onAbsences: () -> Unit
 ) {
-    var adding by remember { mutableStateOf<LocalDate?>(null) }
     val today = remember { LocalDate.now() }
-    val days = remember { (-14L..14L).map { today.plusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
-    val busy = remember(lessons, agenda, grades, absences, reminders) {
-        (lessons.map { it.date } + agenda.map { it.date } + grades.map { it.date.take(10) } + absences.map { it.date.take(10) } + reminders.map { it.date }).toSet()
-    }
-    var selected by rememberSaveable {
-        mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
-    }
     val pending = absences.count { !it.justified }
     val teachers = remember(lessons) { Teachers(lessons) }
     Screen {
@@ -491,18 +482,6 @@ fun TodayScreen(
             }
             animItems(tests.take(3), "tests", 2) { TestItem(it, today, teachers, Mentions.matches("${it.notes} ${it.subject}", myNames)) }
         }
-        item { Box(Modifier.appear(2)) { Header("La giornata") } }
-        item { Box(Modifier.appear(3)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
-        item {
-            Box(Modifier.appear(4)) {
-                DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
-                    DayContent(
-                        day, today, lessons, agenda, grades, absences, teachers,
-                        reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
-                    )
-                }
-            }
-        }
         item { Box(Modifier.appear(5)) { Header("Ultimi voti", "Tutti") { open(Section.Voti) } } }
         if (grades.isEmpty()) item { Empty("Ancora nessun voto quest'anno", Icons.Rounded.Grade) }
         else item {
@@ -526,6 +505,37 @@ fun TodayScreen(
                     leading = { IconCircle(Icons.Rounded.CalendarMonth, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) },
                     trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                 )
+            }
+        }
+    }
+}
+
+/** La giornata: lezioni, compiti, voti, presenze e promemoria di un giorno, con la striscia dei giorni sopra. */
+@Composable
+fun DayScreen(
+    lessons: List<Lesson>, grades: List<Grade>, agenda: List<Event>, absences: List<Absence>,
+    reminders: List<Reminder> = emptyList(), onAddReminder: (String, String) -> Unit = { _, _ -> }, onRemoveReminder: (Reminder) -> Unit = {}
+) {
+    var adding by remember { mutableStateOf<LocalDate?>(null) }
+    val today = remember { LocalDate.now() }
+    val days = remember { (-14L..14L).map { today.plusDays(it) }.filter { it.dayOfWeek != DayOfWeek.SUNDAY } }
+    val busy = remember(lessons, agenda, grades, absences, reminders) {
+        (lessons.map { it.date } + agenda.map { it.date } + grades.map { it.date.take(10) } + absences.map { it.date.take(10) } + reminders.map { it.date }).toSet()
+    }
+    var selected by rememberSaveable {
+        mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
+    }
+    val teachers = remember(lessons) { Teachers(lessons) }
+    Screen {
+        item { Box(Modifier.appear(0)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
+        item {
+            Box(Modifier.appear(1)) {
+                DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
+                    DayContent(
+                        day, today, lessons, agenda, grades, absences, teachers,
+                        reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
+                    )
+                }
             }
         }
     }

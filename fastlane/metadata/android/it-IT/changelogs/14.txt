@@ -1,0 +1,2 @@
+• Nuova scheda Giornata nella barra in basso: lezioni, compiti, voti e promemoria giorno per giorno
+• La Home resta con verifiche, interrogazioni e ultimi voti

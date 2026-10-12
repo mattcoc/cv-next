@@ -56,6 +56,8 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.outlined.Grade
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -146,8 +148,11 @@ class MainActivity : ComponentActivity() {
                         "today" -> Box(Modifier.statusBarsPadding()) {
                             TodayScreen(
                                 "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
-                                DebugData.absences, emptyList(), {}, {}, null, {}, {}, DebugData.reminders
+                                DebugData.absences, emptyList(), {}, {}, null, {}, {}
                             ) {}
+                        }
+                        "day" -> Box(Modifier.statusBarsPadding()) {
+                            DayScreen(DebugData.lessons, DebugData.grades, DebugData.agenda, DebugData.absences, DebugData.reminders)
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
@@ -370,6 +375,7 @@ class Res<T>(private val load: suspend () -> T) {
 /** [inBar] falso: la sezione si apre da Home e da Funzioni ma non ha un tasto nella barra in basso. */
 enum class Section(val label: String, val icon: ImageVector, val selected: ImageVector, val inBar: Boolean = true) {
     Oggi("Home", Icons.Outlined.Home, Icons.Rounded.Home),
+    Giornata("Giornata", Icons.Outlined.Today, Icons.Rounded.Today),
     Voti("Voti", Icons.Outlined.Grade, Icons.Rounded.Grade),
     Agenda("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth, inBar = false),
     Bacheca("Bacheca", Icons.Outlined.Campaign, Icons.Rounded.Campaign),
@@ -444,9 +450,14 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, onSwitch: 
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
                                 { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
                                 update, { stack.add(Page.Preferences) }, { update = null },
-                                reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) },
                                 api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty()
                             ) { stack.add(Page.Absences) }
+                        }
+                        Section.Giornata -> Refreshable(lessons, grades, agenda, absences) {
+                            DayScreen(
+                                lessons.data!!, grades.data!!, agenda.data!!, absences.data!!,
+                                reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) }
+                            )
                         }
                         Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
                         Section.Agenda -> Refreshable(agenda) { AgendaScreen(agenda.data!!, agendaFilter, lessons.data.orEmpty()) { agendaFilter = it } }

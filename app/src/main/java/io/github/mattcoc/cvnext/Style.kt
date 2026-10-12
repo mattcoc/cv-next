@@ -24,10 +24,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -112,13 +110,8 @@ private fun shapes(xs: Int, s: Int, m: Int, l: Int, xl: Int) = Shapes(
     large = RoundedCornerShape(l.dp), extraLarge = RoundedCornerShape(xl.dp)
 )
 
-/** Doto: carattere a puntini simile a quello di Nothing (licenza OFL, vedi licenses/Doto-OFL.txt). */
-@OptIn(ExperimentalTextApi::class)
-private val Dots = FontFamily(
-    listOf(FontWeight.Normal to 800, FontWeight.Medium to 850, FontWeight.SemiBold to 900, FontWeight.Bold to 900).map { (w, v) ->
-        Font(R.font.doto, w, variationSettings = FontVariation.Settings(FontVariation.weight(v), FontVariation.Setting("ROND", 100f)))
-    }
-)
+/** Doto: carattere a puntini simile a quello di Nothing (licenza OFL, vedi licenses/Doto-OFL.txt), fissato a peso 900 e puntini tondi. */
+private val Dots = FontFamily(Font(R.font.doto))
 
 fun styledTypography(style: AppStyle): Typography {
     val t = Typography()
@@ -172,7 +165,7 @@ fun panelColor(): Color = MaterialTheme.colorScheme.let { c ->
 fun barColor(): Color = MaterialTheme.colorScheme.let { c ->
     when (LocalStyle.current) {
         AppStyle.Material -> c.surfaceContainer
-        AppStyle.Glass -> if (LocalDark.current) Color(0xFF1C1C24).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.92f)
+        AppStyle.Glass -> if (LocalDark.current) Color(0xFF1C1C24).copy(alpha = 0.95f) else Color.White.copy(alpha = 0.96f)
         else -> c.surfaceContainer
     }
 }

@@ -151,19 +151,21 @@ class MainActivity : ComponentActivity() {
                         "settings" -> SettingsScreen(settings) { finish() }
                         "grades" -> Box(Modifier.statusBarsPadding()) { GradesScreen(DebugData.grades, DebugData.periods) }
                         "today" -> Box(Modifier.fillMaxSize()) {
-                            Box(Modifier.statusBarsPadding()) {
+                            Box(Modifier.statusBarsPadding().padding(start = if (LocalWide.current) 100.dp else 0.dp)) {
                                 TodayScreen(
                                     "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
                                     DebugData.absences, emptyList(), {}, {}, null, {}, {}
                                 ) {}
                             }
-                            FloatingNavBar(Section.Oggi, Modifier.align(Alignment.BottomCenter)) {}
+                            if (LocalWide.current) SideRail(Section.Oggi, Modifier.statusBarsPadding()) {}
+                            else FloatingNavBar(Section.Oggi, Modifier.align(Alignment.BottomCenter)) {}
                         }
                         "day", "guide" -> Box(Modifier.fillMaxSize()) {
-                            Box(Modifier.statusBarsPadding()) {
+                            Box(Modifier.statusBarsPadding().padding(start = if (LocalWide.current) 100.dp else 0.dp)) {
                                 DayScreen(DebugData.lessons, DebugData.grades, DebugData.agenda, DebugData.absences, DebugData.reminders)
                             }
-                            FloatingNavBar(Section.Giornata, Modifier.align(Alignment.BottomCenter)) {}
+                            if (LocalWide.current) SideRail(Section.Giornata, Modifier.statusBarsPadding()) {}
+                            else FloatingNavBar(Section.Giornata, Modifier.align(Alignment.BottomCenter)) {}
                             if (debugScreen == "guide") GuideOverlay({}, start = 2) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }

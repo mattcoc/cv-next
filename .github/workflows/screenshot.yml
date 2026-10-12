@@ -54,7 +54,8 @@ jobs:
           disable-animations: true
           script: |
             adb install -r app.apk
-            for style in ${{ github.event.inputs.styles || '0' }}; do for screen in ${{ github.event.inputs.screen || 'settings' }}; do n=${screen}_s${style}_${{ github.event.inputs.profile || 'pixel_6' }}; adb shell am start -S -n io.github.mattcoc.cvnext/io.github.mattcoc.cvnext.MainActivity --es debugScreen $screen --ei debugStyle $style ${{ github.event.inputs.extras }}; sleep 10; adb exec-out screencap -p > ${n}_1.png; adb shell input swipe 540 1900 540 600 400; sleep 3; adb exec-out screencap -p > ${n}_2.png; done; done
+            adb shell settings put global hide_error_dialogs 1
+            for style in ${{ github.event.inputs.styles || '0' }}; do for screen in ${{ github.event.inputs.screen || 'settings' }}; do n=${screen}_s${style}_${{ github.event.inputs.profile || 'pixel_6' }}; adb shell am start -S -n io.github.mattcoc.cvnext/io.github.mattcoc.cvnext.MainActivity --es debugScreen $screen --ei debugStyle $style ${{ github.event.inputs.extras }}; sleep 10; adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null; adb exec-out screencap -p > ${n}_1.png; adb shell input swipe 540 1900 540 600 400; sleep 3; adb exec-out screencap -p > ${n}_2.png; done; done
             adb logcat -d -b crash
 
       # Pre-release a parte, così l'aggiornamento in-app (releases/latest) non la vede.

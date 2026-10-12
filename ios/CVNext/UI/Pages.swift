@@ -44,7 +44,7 @@ struct FunctionsView: View {
     }
 
     private func grid(_ fns: [Fn]) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
             ForEach(fns) { fn in
                 let tile = VStack(alignment: .leading, spacing: 10) {
                     Image(systemName: fn.icon).font(.title3).foregroundStyle(fn.color)
@@ -85,7 +85,7 @@ struct AbsencesView: View {
             .frame(maxWidth: .infinity)
             .glassCard(.green, padding: 28)
         } else {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                 ForEach(kinds.indices, id: \.self) { i in
                     let label = kinds[i].0
                     let type = kinds[i].1

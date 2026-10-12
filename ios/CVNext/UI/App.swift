@@ -111,6 +111,8 @@ struct HomeView: View {
                 NavigationStack { FunctionsView().chrome("Funzioni") }
             }
         }
+        // Su iPad le schede diventano una barra laterale che si può aprire e chiudere.
+        .tabViewStyle(.sidebarAdaptable)
         // Barra sempre intera: non si rimpicciolisce scorrendo.
         .tabBarMinimizeBehavior(.never)
         .environment(model)

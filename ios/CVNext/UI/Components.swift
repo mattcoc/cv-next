@@ -58,10 +58,13 @@ struct Screen<Content: View>: View {
 
     var body: some View {
         ScrollView {
+            // Su iPad il contenuto resta in una colonna leggibile al centro
             VStack(alignment: .leading, spacing: 10) { content() }
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
                 .padding(.bottom, 32)
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
         .background { AppBackground() }

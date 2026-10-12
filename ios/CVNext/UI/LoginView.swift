@@ -88,6 +88,9 @@ struct LoginView: View {
                     .padding(.top, 8)
                 }
                 .padding(24)
+                // Su iPad il modulo resta largo come su un telefono
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
             }
         .scrollDismissesKeyboard(.interactively)
         // Lo sfondo va dietro e non in uno ZStack: le sue macchie sono più larghe di un iPhone piccolo e allargherebbero tutto.

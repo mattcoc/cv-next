@@ -96,6 +96,27 @@ jobs:
               xcrun simctl io "$UDID" screenshot shots/${screen}_${mode}.png
             done
           done
+          # Le stesse schermate principali su iPad, in orizzontale non serve: basta verticale chiaro e scuro.
+          IPAD=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          pads = [x for k, v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPad Pro')] or [x for k, v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPad')]
+          print(pads[-1]['udid'] if pads else '')")
+          if [ -n "$IPAD" ]; then
+            xcrun simctl boot "$IPAD"
+            xcrun simctl bootstatus "$IPAD"
+            xcrun simctl status_bar "$IPAD" override --time 9:41 --batteryLevel 100
+            xcrun simctl install "$IPAD" ios/build/Build/Products/Debug-iphonesimulator/CVNext.app
+            for mode in light dark; do
+              xcrun simctl ui "$IPAD" appearance $mode
+              for screen in today grades settings login; do
+                xcrun simctl terminate "$IPAD" io.github.mattcoc.cvnext 2>/dev/null || true
+                xcrun simctl launch "$IPAD" io.github.mattcoc.cvnext -debugScreen $screen
+                sleep 6
+                xcrun simctl io "$IPAD" screenshot shots/ipad_${screen}_${mode}.png
+              done
+            done
+          fi
 
       - name: Salva gli screenshot nel branch
         run: |

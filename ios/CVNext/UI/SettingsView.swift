@@ -179,6 +179,8 @@ struct SettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .frame(maxWidth: 720)
+        .frame(maxWidth: .infinity)
         .background { AppBackground() }
         .navigationTitle("Impostazioni")
     }

@@ -6,10 +6,10 @@ options:
   developmentLanguage: it
 settings:
   base:
-    MARKETING_VERSION: "1.5.3"
+    MARKETING_VERSION: "1.6.1"
     CURRENT_PROJECT_VERSION: "12"
     SWIFT_VERSION: "5.0"
-    TARGETED_DEVICE_FAMILY: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
 targets:
   CVNext:
     type: application
@@ -25,6 +25,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [io.github.mattcoc.cvnext.check]
         ITSAppUsesNonExemptEncryption: false

@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
                         "today" -> Box(Modifier.fillMaxSize()) {
                             Box(Modifier.statusBarsPadding().padding(start = if (LocalWide.current) 100.dp else 0.dp)) {
                                 TodayScreen(
-                                    "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
+                                    "Marco Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
                                     DebugData.absences, emptyList(), {}, {}, null, {}, {}
                                 ) {}
                             }
@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                         "invite" -> Box(Modifier.fillMaxSize()) {
                             Box(Modifier.statusBarsPadding().padding(start = if (LocalWide.current) 100.dp else 0.dp)) {
                                 TodayScreen(
-                                    "Matteo Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
+                                    "Marco Rossi", School("Istituto Tecnico", "Padova PD"), DebugData.lessons, DebugData.grades, DebugData.agenda,
                                     DebugData.absences, emptyList(), {}, {}, null, {}, {}
                                 ) {}
                             }

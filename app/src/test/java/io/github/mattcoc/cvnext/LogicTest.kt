@@ -124,14 +124,14 @@ class LogicTest {
     @Test
     fun eventSubjectComesFromTheTeachersLessons() {
         val lessons = listOf(
-            Lesson("2026-10-01", 1, 1, "Sistemi Automatici", "", "De Rito Mauro"),
+            Lesson("2026-10-01", 1, 1, "Sistemi Automatici", "", "Galli Paolo"),
             Lesson("2026-10-01", 2, 1, "Elettrotecnica ed Elettronica", "", "Ricchi Claudio"),
             Lesson("2026-10-02", 2, 2, "Elettrotecnica ed Elettronica", "", "Ricchi Claudio"),
             Lesson("2026-10-03", 4, 1, "Laboratorio Tecnologico", "", "Ricchi Claudio, Bianchi Luca")
         )
         val t = Teachers(lessons)
         fun ev(author: String, notes: String, subject: String = "") = Event("2026-10-13", "", subject, author, notes, false)
-        assertEquals("Sistemi Automatici", t.subject(ev("De Rito Mauro", "Verifica")))
+        assertEquals("Sistemi Automatici", t.subject(ev("Galli Paolo", "Verifica")))
         assertEquals("Elettrotecnica ed Elettronica", t.subject(ev("Ricchi Claudio", "Interrogazione")))
         assertEquals("Laboratorio Tecnologico", t.subject(ev("Ricchi Claudio", "Verifica di laboratorio")))
         assertEquals("Storia", t.subject(ev("Ricchi Claudio", "", "Storia")))

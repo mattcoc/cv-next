@@ -82,6 +82,7 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
     val subjects = grades.groupBy { it.subject }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
     val avg = grades.subjectsAvg()
     val tabs = periods.map { it.pos } + YEAR
+    val fresh = LocalNewGrades.current
     Screen {
         if (periods.size > 1) item {
             val card: @Composable (Int, Modifier) -> Unit = { pos, m ->
@@ -135,7 +136,10 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column {
-                            Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(subject, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                if (list.any { it.key in fresh }) { Spacer(Modifier.width(8.dp)); NewBadge() }
+                            }
                             val subjectAvg = list.gradeAvg()
                             val note = when {
                                 subjectAvg == null -> "Nessun voto che fa media"
@@ -155,7 +159,11 @@ fun GradesScreen(all: List<Grade>, apiPeriods: List<Period>) {
                 }
             }
         } else animItems(grades, "g-$period", 3) {
-            Item(it.subject, listOf(shortDate(it.date), it.type).filter(String::isNotBlank).joinToString(" · "), it.notes, expandable = true, leading = { GradeCircle(it) })
+            val new = it.key in fresh
+            Item(
+                it.subject, listOf(shortDate(it.date), it.type).filter(String::isNotBlank).joinToString(" · "), it.notes, expandable = true, bold = new,
+                leading = { GradeCircle(it) }, trailing = if (new) { { NewBadge() } } else null
+            )
         }
     }
     open?.let { subject -> SubjectSheet(subject, all.filter { it.subject == subject }, periods) { open = null } }

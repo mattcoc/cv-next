@@ -1,5 +1,9 @@
 package io.github.mattcoc.cvnext
 
+import android.os.SystemClock
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
@@ -132,6 +136,9 @@ import java.time.LocalDate
 class MainActivity : ComponentActivity() {
     private val target = mutableStateOf<String?>(null)
     private val targetAccount = mutableStateOf<String?>(null)
+    private val locked = mutableStateOf(false)
+    private var leftAt = 0L
+    private var lockOn: () -> Boolean = { false }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -149,6 +156,8 @@ class MainActivity : ComponentActivity() {
         if (debuggable) intent?.getIntExtra("debugMode", -1)?.takeIf { it >= 0 }?.let { settings.update(mode = it) }
         if (debuggable) intent?.getIntExtra("debugStyle", -1)?.let { AppStyle.entries.getOrNull(it) }?.let { settings.updateStyle(it) }
         if (debuggable) intent?.getStringExtra("debugSeed")?.let { name -> seeds.firstOrNull { it.second == name }?.let { settings.update(seed = it.first) } }
+        lockOn = { debugScreen == null && settings.lock && AppLock.available(this) }
+        locked.value = savedInstanceState?.getBoolean("locked") ?: lockOn()
         setContent {
             AppTheme(settings) {
                 Backdrop(Modifier.fillMaxSize()) {
@@ -197,11 +206,29 @@ class MainActivity : ComponentActivity() {
                         "tests" -> SubScreen("Verifiche e interrogazioni", {}) { TestsScreen(DebugData.agenda, DebugData.lessons) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
                         "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
-                        else -> App(api, settings, target, targetAccount)
+                        else -> Box(Modifier.fillMaxSize()) {
+                            App(api, settings, target, targetAccount)
+                            if (locked.value) LockScreen { AppLock.unlock(this@MainActivity) { locked.value = false } }
+                        }
                     }
                 }
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        leftAt = SystemClock.elapsedRealtime()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (leftAt > 0 && SystemClock.elapsedRealtime() - leftAt > AppLock.GRACE_MS && lockOn()) locked.value = true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("locked", locked.value)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -474,12 +501,38 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
     LaunchedEffect(settings.guideDone) { if (settings.guideDone) invite = Invite.due(context, settings) }
     // Da una notifica di un altro account: la sezione la apre la Home di quell'account, dopo il cambio.
     val mine = remember { api.current }
-    LaunchedEffect(target.value, pendingAccount) {
+    var noticeReload by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(target.value, pendingAccount, notices.data, notices.loading) {
         if (pendingAccount != null || api.current != mine) return@LaunchedEffect
-        target.value?.let { name -> Section.entries.firstOrNull { it.name == name }?.let { stack.clear(); section = it } }
+        val t = target.value ?: return@LaunchedEffect
+        when {
+            // Da una notifica della Bacheca: apre la circolare appena arriva l'elenco aggiornato.
+            t.startsWith("notice:") -> {
+                if (section != Section.Bacheca) { stack.clear(); section = Section.Bacheca }
+                val n = notices.data?.firstOrNull { "${it.id}" == t.removePrefix("notice:") }
+                if (n == null) {
+                    // Non c'è ancora: ricarica la Bacheca una volta, poi lascia perdere.
+                    if (!notices.loading) {
+                        if (noticeReload != t) { noticeReload = t; scope.launch { notices.refresh() } } else target.value = null
+                    }
+                    return@LaunchedEffect
+                }
+                stack.add(Page.NoticePage(n))
+            }
+            // Scorciatoie dell'icona dell'app.
+            t == "Tests" -> { stack.clear(); stack.add(Page.Tests) }
+            t == "Compiti" -> { stack.clear(); agendaFilter = "Compiti"; section = Section.Agenda }
+            else -> Section.entries.firstOrNull { it.name == t }?.let { stack.clear(); section = it }
+        }
         target.value = null
     }
     BackHandler(section != Section.Oggi && stack.isEmpty()) { section = Section.Oggi }
+    val done = remember { DoneStore(context, api.current) { scope.launch { runCatching { HomeworkWidget.refresh(context) } } } }
+    val seen = remember { SeenGrades(context, api.current) }
+    LaunchedEffect(grades.data) { grades.data?.let { seen.start(it) } }
+    val fresh = grades.data?.let { seen.fresh(it) }.orEmpty()
+    val badges = mapOf(Section.Voti to fresh.size, Section.Bacheca to notices.data.orEmpty().count { !it.read })
+    CompositionLocalProvider(LocalDone provides done, LocalNewGrades provides fresh, LocalBadges provides badges) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -528,7 +581,11 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                                 reminders.of(api.current), { date, text -> api.current?.let { reminders.add(it, date, text) } }, { reminders.remove(it) }
                             )
                         }
-                        Section.Voti -> Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
+                        Section.Voti -> {
+                            // Uscendo dalla scheda Voti quelli nuovi diventano visti.
+                            DisposableEffect(Unit) { onDispose { grades.data?.let { seen.markSeen(it) } } }
+                            Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
+                        }
                         Section.Agenda -> Refreshable(agenda) { AgendaScreen(agenda.data!!, agendaFilter, lessons.data.orEmpty()) { agendaFilter = it } }
                         Section.Bacheca -> Refreshable(notices) { NoticesScreen(notices.data!!) { stack.add(Page.NoticePage(it)) } }
                         Section.Funzioni -> FunctionsScreen({ stack.add(it) }, { agendaFilter = "Compiti"; section = Section.Agenda }) {
@@ -588,6 +645,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
             }
         }
         if (!settings.guideDone) GuideOverlay({ stack.clear(); section = it }) { settings.updateGuide(true) }
+    }
     }
     if (invite) NotificationInvite(settings) { invite = false }
     if (menu) AccountSheet(
@@ -683,4 +741,26 @@ fun OfflineBanner(error: String, retry: () -> Unit) = Row(
 fun Lazy(res: Res<*>, content: @Composable () -> Unit) {
     LaunchedEffect(res) { if (res.data == null && !res.loading) res.refresh() }
     Refreshable(res, content = content)
+}
+
+/** Schermata coperta finché non si sblocca con impronta, volto o codice. */
+@Composable
+fun LockScreen(unlock: () -> Unit) {
+    LaunchedEffect(Unit) { unlock() }
+    BackHandler { }
+    Backdrop(Modifier.fillMaxSize().clickable(remember { MutableInteractionSource() }, null) { }) {
+        Column(
+            Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+        ) {
+            Icon(Icons.Rounded.Lock, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
+            Text("CV Next è bloccata", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Button(unlock) {
+                Icon(Icons.Rounded.Fingerprint, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Sblocca")
+            }
+        }
+    }
 }

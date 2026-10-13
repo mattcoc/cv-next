@@ -3,4 +3,12 @@
     <string name="widget_name">Compiti</string>
     <string name="widget_description">I prossimi compiti dall\'agenda</string>
     <string name="widget_loading">Caricamento…</string>
+    <string name="shortcut_grades">Voti</string>
+    <string name="shortcut_grades_long">Voti e medie</string>
+    <string name="shortcut_day">Giornata</string>
+    <string name="shortcut_day_long">La mia giornata</string>
+    <string name="shortcut_homework">Compiti</string>
+    <string name="shortcut_homework_long">Compiti da fare</string>
+    <string name="shortcut_tests">Verifiche</string>
+    <string name="shortcut_tests_long">Verifiche e interrogazioni</string>
 </resources>

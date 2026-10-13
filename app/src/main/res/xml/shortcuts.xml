@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scorciatoie tenendo premuta l'icona dell'app: l'extra "section" è lo stesso usato dalle notifiche. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="grades"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_grades"
+        android:shortcutShortLabel="@string/shortcut_grades"
+        android:shortcutLongLabel="@string/shortcut_grades_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.mattcoc.cvnext"
+            android:targetClass="io.github.mattcoc.cvnext.MainActivity">
+            <extra
+                android:name="section"
+                android:value="Voti" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="day"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_day"
+        android:shortcutShortLabel="@string/shortcut_day"
+        android:shortcutLongLabel="@string/shortcut_day_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.mattcoc.cvnext"
+            android:targetClass="io.github.mattcoc.cvnext.MainActivity">
+            <extra
+                android:name="section"
+                android:value="Giornata" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="homework"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_homework"
+        android:shortcutShortLabel="@string/shortcut_homework"
+        android:shortcutLongLabel="@string/shortcut_homework_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.mattcoc.cvnext"
+            android:targetClass="io.github.mattcoc.cvnext.MainActivity">
+            <extra
+                android:name="section"
+                android:value="Compiti" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="tests"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_tests"
+        android:shortcutShortLabel="@string/shortcut_tests"
+        android:shortcutLongLabel="@string/shortcut_tests_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.mattcoc.cvnext"
+            android:targetClass="io.github.mattcoc.cvnext.MainActivity">
+            <extra
+                android:name="section"
+                android:value="Tests" />
+        </intent>
+    </shortcut>
+</shortcuts>

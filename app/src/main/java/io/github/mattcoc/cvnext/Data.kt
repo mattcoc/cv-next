@@ -3,6 +3,7 @@ package io.github.mattcoc.cvnext
 import org.json.JSONObject
 import android.text.Html
 import java.io.File
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -90,9 +91,15 @@ suspend fun Api.attachment(dir: File, n: Notice, a: Attachment): File {
     dir.mkdirs()
     val file = File(dir, "notice_${n.id}_${a.num}.pdf")
     if (file.length() > 0) return file
-    val data = runCatching { bytes("/noticeboard/attach/${n.code}/${n.id}/${a.num}") }.getOrNull()
-        ?.takeIf { it.isPdf() } ?: bytes("/noticeboard/attach/${n.code}/${n.id}/101")
-    if (!data.isPdf()) throw ApiException("Il file non è un PDF")
+    suspend fun download() = runCatching { bytes("/noticeboard/attach/${n.code}/${n.id}/${a.num}") }.getOrNull()
+        ?.takeIf { it.isPdf() } ?: runCatching { bytes("/noticeboard/attach/${n.code}/${n.id}/101") }.getOrNull()?.takeIf { it.isPdf() }
+    // Una circolare appena arrivata (ad esempio aperta da una notifica) dà 404 sugli allegati finché non risulta letta:
+    // se il primo tentativo fallisce la segna come letta e riprova.
+    val data = download() ?: run {
+        runCatching { readNotice(n) }
+        delay(800)
+        download()
+    } ?: throw ApiException("Allegato non ancora disponibile. Riprova tra qualche secondo.")
     file.writeBytes(data)
     return file
 }

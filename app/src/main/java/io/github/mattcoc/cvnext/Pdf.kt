@@ -39,6 +39,7 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -162,6 +163,7 @@ fun PdfViewer(
     title: String,
     prefix: String = "",
     empty: String? = null,
+    onRetry: (() -> Unit)? = null,
     header: LazyListScope.() -> Unit = {},
     footer: LazyListScope.() -> Unit = {}
 ) {
@@ -182,7 +184,10 @@ fun PdfViewer(
             when {
                 empty != null -> item { Empty(empty) }
                 doc == null -> item { Loading("Apertura del PDF…") }
-                doc.isFailure -> item { Empty(doc.exceptionOrNull()?.message ?: "Impossibile aprire il PDF") }
+                doc.isFailure -> {
+                    item { Empty(doc.exceptionOrNull()?.message ?: "Impossibile aprire il PDF") }
+                    onRetry?.let { retry -> item { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { FilledTonalButton(retry) { Text("Riprova") } } } }
+                }
                 else -> {
                     val d = doc.getOrThrow()
                     item {
@@ -341,7 +346,9 @@ fun NoticeScreen(api: Api, notice: Notice, onClose: () -> Unit) {
     var attachment by remember { mutableStateOf(notice.attachments.firstOrNull()) }
     val text by produceState<String?>(null) { value = runCatching { api.readNotice(notice) }.getOrDefault("") }
     val a = attachment
-    val doc = rememberPdf(a, if (a == null) null else ({ api.attachment(context.cacheDir, notice, a) }))
+    // L'allegato si scarica dopo aver segnato la circolare come letta: prima Classeviva risponde 404.
+    var attempt by remember { mutableIntStateOf(0) }
+    val doc = rememberPdf((a to attempt).takeIf { a != null && text != null }, if (a == null || text == null) null else ({ api.attachment(context.cacheDir, notice, a) }))
     val many = notice.attachments.size > 1
     SubScreen(notice.title, onClose, actions = { PdfActions(doc, a?.name?.removeSuffix(".pdf") ?: notice.title) }) {
         PdfViewer(
@@ -350,6 +357,7 @@ fun NoticeScreen(api: Api, notice: Notice, onClose: () -> Unit) {
             title = a?.name?.removeSuffix(".pdf") ?: notice.title,
             prefix = if (many) "Allegato ${notice.attachments.indexOf(attachment) + 1}/${notice.attachments.size} · " else "",
             empty = if (a == null) (if (text == null) "Caricamento…" else "Nessun allegato") else null,
+            onRetry = { attempt++ },
             header = {
                 item {
                     Card(Modifier.fillMaxWidth().appear(0)) {

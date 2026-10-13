@@ -95,11 +95,13 @@ object Notifier {
     fun post(context: Context, alert: Alert, account: String, id: String, text: String) {
         runCatching {
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            // Una circolare si apre direttamente, non solo la Bacheca: ogni notifica ha il suo intent.
+            val target = if (alert == Alert.Notices) "notice:$id" else alert.section
             val intent = Intent(context, MainActivity::class.java)
-                .putExtra("section", alert.section)
+                .putExtra("section", target)
                 .putExtra("account", account)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            val pending = PendingIntent.getActivity(context, "${alert.name}-$account".hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val pending = PendingIntent.getActivity(context, "${alert.name}-$account-$id".hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val notification = NotificationCompat.Builder(context, alert.name)
                 .setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(alert.single)

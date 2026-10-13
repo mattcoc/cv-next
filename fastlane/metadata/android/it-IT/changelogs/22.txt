@@ -1,0 +1,11 @@
+Novità
+• Compiti: tocca il cerchio accanto a un compito per segnarlo come fatto. Resta barrato e sparisce dal widget
+• Voti nuovi: hanno l'etichetta "Nuovo" in Home e in Voti finché non apri la scheda Voti. Sulla barra in basso un numero indica i voti nuovi e le circolari da leggere
+• Scorciatoie: tieni premuta l'icona dell'app per aprire subito Voti, Giornata, Compiti o Verifiche
+• Verifiche e interrogazioni: con il tasto calendario le aggiungi al calendario del telefono
+• Blocco con impronta: in Impostazioni → Sicurezza puoi chiedere l'impronta, il volto o il codice del telefono all'apertura
+• Bacheca: barra di ricerca per trovare una circolare dal titolo
+
+Correzioni
+• Una circolare aperta da una notifica dava "Errore 404" sul PDF: ora il PDF si carica subito. Toccando la notifica si apre direttamente la circolare
+• Colloqui si apre nel browser, sul sito di Classeviva, perché dentro l'app non funzionava

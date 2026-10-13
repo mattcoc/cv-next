@@ -1,5 +1,6 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -128,6 +129,13 @@ class Settings(context: Context) {
         private set
     var guideDone by mutableStateOf(prefs.getBoolean("guideDone", false))
         private set
+    var lock by mutableStateOf(prefs.getBoolean("lock", false))
+        private set
+
+    fun updateLock(on: Boolean) {
+        lock = on
+        prefs.edit().putBoolean("lock", on).apply()
+    }
 
     fun updateStyle(style: AppStyle) {
         this.style = style
@@ -248,6 +256,21 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
             item { Box(Modifier.appear(3)) { NotificationsCard(settings, api) } }
             item { Box(Modifier.appear(4)) { SectionTitle("Aggiornamenti") } }
             item { Box(Modifier.appear(5)) { UpdatesCard(settings) } }
+            if (settings.lock || AppLock.available(context)) {
+                item { Box(Modifier.appear(6)) { SectionTitle("Sicurezza") } }
+                item {
+                    Box(Modifier.appear(6)) {
+                        Group {
+                            SettingRow(
+                                Icons.Rounded.Fingerprint, "Blocca con impronta",
+                                "All'apertura chiede l'impronta, il volto o il codice del telefono",
+                                onClick = { settings.updateLock(!settings.lock) },
+                                trailing = { CheckSwitch(settings.lock) { settings.updateLock(it) } }
+                            )
+                        }
+                    }
+                }
+            }
             item { Box(Modifier.appear(6)) { SectionTitle("Dati e spazio") } }
             item { Box(Modifier.appear(7)) { StorageCard() } }
             item { Box(Modifier.appear(8)) { SectionTitle("Informazioni") } }

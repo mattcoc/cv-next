@@ -132,6 +132,7 @@ private class Fn(val label: String, val icon: ImageVector, val web: Boolean = fa
 
 @Composable
 fun FunctionsScreen(open: (Page) -> Unit, onHomework: () -> Unit, goto: (Section) -> Unit) {
+    val context = LocalContext.current
     val school = listOf(
         Fn("Valutazioni", Icons.Rounded.Grade) { goto(Section.Voti) },
         Fn("Bacheca", Icons.Rounded.Campaign) { goto(Section.Bacheca) },
@@ -146,7 +147,8 @@ fun FunctionsScreen(open: (Page) -> Unit, onHomework: () -> Unit, goto: (Section
         Fn("Anno precedente", Icons.Rounded.History) { open(Page.LastYear) }
     )
     val web = listOf(
-        Fn("Colloqui", Icons.Rounded.Groups, true) { open(Page.Web("Colloqui", WebLinks.meetings)) },
+        // Dentro l'app la pagina dei colloqui non funziona: si apre nel browser, sul sito di Classeviva.
+        Fn("Colloqui", Icons.Rounded.Groups, true) { openLink(context, WebLinks.meetings) },
         Fn("Sportello", Icons.Rounded.SupportAgent, true) { open(Page.Web("Sportello", WebLinks.desk)) },
         Fn("Progettiamo la Scuola", Icons.AutoMirrored.Rounded.MenuBook, true) { open(Page.Web("Progettiamo la Scuola", WebLinks.projects)) },
         Fn("Certificazioni", Icons.Rounded.WorkspacePremium, true) { open(Page.Web("Certificazioni", WebLinks.certificates)) },
@@ -201,7 +203,8 @@ fun NotesScreen(list: List<NoteItem>) {
                 else -> c.secondaryContainer to c.onSecondaryContainer
             }
             Item(it.type, listOf(longDate(it.date), it.author).filter(String::isNotBlank).joinToString(" · "), it.text,
-                bold = !it.read, expandable = true, leading = { IconCircle(Icons.Rounded.Feedback, bg, fg) })
+                bold = !it.read, expandable = true, leading = { IconCircle(Icons.Rounded.Feedback, bg, fg) },
+                trailing = if (!it.read) { { NewBadge() } } else null)
         }
     }
 }

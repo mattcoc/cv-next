@@ -1,5 +1,20 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import android.content.Context
+import android.content.Intent
+import android.content.ActivityNotFoundException
+import android.provider.CalendarContract
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.rounded.EditCalendar
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import kotlin.math.absoluteValue
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.pager.PagerState
@@ -195,6 +210,7 @@ fun Item(
     expandable: Boolean = false,
     footer: String? = null,
     onClick: (() -> Unit)? = null,
+    done: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -210,12 +226,15 @@ fun Item(
         })
     val body: @Composable () -> Unit = {
         ListItem(
-            headlineContent = { Text(headline, fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium) },
+            headlineContent = {
+                Text(headline, fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium, textDecoration = if (done) TextDecoration.LineThrough else null)
+            },
             overlineContent = overline?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
             supportingContent = supportingContent,
             leadingContent = leading,
             trailingContent = trailing,
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = if (done) Modifier.alpha(0.55f) else Modifier
         )
     }
     if (onClick != null) Card(onClick, Modifier.fillMaxWidth()) { body() } else Card(Modifier.fillMaxWidth()) { body() }
@@ -410,6 +429,9 @@ fun EventIcon(e: Event) {
 @Composable
 fun EventItem(e: Event, teachers: Teachers, showDate: Boolean = false, mine: Boolean = false) {
     val subject = teachers.subject(e)
+    // I compiti si spuntano quando sono fatti: restano barrati e spariscono dal widget.
+    val store = LocalDone.current?.takeIf { e.homework }
+    val done = store?.isDone(e) == true
     Item(
         subject.ifBlank { e.author.ifBlank { eventKind(e) } },
         listOfNotNull(
@@ -421,7 +443,19 @@ fun EventItem(e: Event, teachers: Teachers, showDate: Boolean = false, mine: Boo
         ).filter(String::isNotBlank).joinToString(" · "),
         e.notes.tidy(), expandable = true, bold = mine,
         footer = if (subject.isNotBlank()) e.author else null,
-        leading = { EventIcon(e) }
+        done = done,
+        leading = { EventIcon(e) },
+        trailing = if (store == null) null else {
+            {
+                IconToggleButton(done, { store.toggle(e) }) {
+                    Icon(
+                        if (done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                        if (done) "Segna come da fare" else "Segna come fatto",
+                        tint = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     )
 }
 
@@ -437,6 +471,7 @@ fun TodayScreen(
     val today = remember { LocalDate.now() }
     val pending = absences.count { !it.justified }
     val teachers = remember(lessons) { Teachers(lessons) }
+    val newGrades = LocalNewGrades.current
     Screen {
         item {
             Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp).appear(0)) {
@@ -514,7 +549,11 @@ fun TodayScreen(
                 itemsIndexed(grades.take(10)) { i, g ->
                     Card(Modifier.width(124.dp).appear(6 + i)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GradeCircle(g)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                GradeCircle(g)
+                                Spacer(Modifier.weight(1f))
+                                if (g.key in newGrades) NewBadge()
+                            }
                             Text(g.subject, style = MaterialTheme.typography.titleSmall, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(shortDate(g.date), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -605,16 +644,42 @@ fun TestItem(e: Event, today: LocalDate, teachers: Teachers, mine: Boolean = fal
         footer = if (subject.isNotBlank()) e.author else null,
         leading = { EventIcon(e) },
         trailing = {
-            Text(
-                when {
-                    days == 0L -> "Oggi"; days == 1L -> "Domani"; days == -1L -> "Ieri"
-                    days < 0 -> "${-days} giorni fa"; else -> "Tra $days giorni"
-                },
-                Modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
-                color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    when {
+                        days == 0L -> "Oggi"; days == 1L -> "Domani"; days == -1L -> "Ieri"
+                        days < 0 -> "${-days} giorni fa"; else -> "Tra $days giorni"
+                    },
+                    Modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
+                    color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold
+                )
+                if (days >= 0) {
+                    val context = LocalContext.current
+                    IconButton({ addToCalendar(context, e, subject) }) {
+                        Icon(Icons.Rounded.EditCalendar, "Aggiungi al calendario", tint = c.primary)
+                    }
+                }
+            }
         }
     )
+}
+
+/** Apre il calendario del telefono con la verifica già compilata, come evento di tutto il giorno. */
+fun addToCalendar(context: Context, e: Event, subject: String) {
+    val start = LocalDate.parse(e.date).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+    val title = listOf(e.testKind, subject.ifBlank { e.author }).filter(String::isNotBlank).joinToString(" di ")
+    val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
+        .putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
+        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + 24 * 3600_000L)
+        .putExtra(CalendarContract.Events.TITLE, title)
+        .putExtra(CalendarContract.Events.DESCRIPTION, listOf(e.notes.tidy(), e.author).filter(String::isNotBlank).joinToString("\n"))
+        .putExtra(CalendarContract.Events.HAS_ALARM, 1)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "Nessuna app calendario trovata", Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable
@@ -648,7 +713,9 @@ fun AgendaScreen(events: List<Event>, filter: String, lessons: List<Lesson> = em
     val filters = listOf("Tutto", "Compiti")
     Screen {
         item {
-            ChipRow(filters, filter, { if (it == "Compiti") "Compiti · ${homework.size}" else it }, Modifier.appear(0), onFilter)
+            val done = LocalDone.current
+            val todo = homework.count { done?.isDone(it) != true }
+            ChipRow(filters, filter, { if (it == "Compiti") "Compiti · $todo" else it }, Modifier.appear(0), onFilter)
         }
         if (filter == "Tutto") {
             item { Box(Modifier.appear(1)) { DayStrip(days, LocalDate.parse(selected), { byDay.containsKey(it.toString()) }) { selected = it.toString() } } }
@@ -746,12 +813,27 @@ fun AbsencesScreen(list: List<Absence>) {
 fun NoticesScreen(list: List<Notice>, onOpen: (Notice) -> Unit) {
     val categories = remember(list) { listOf("Tutte") + list.map { it.category }.filter(String::isNotBlank).distinct() }
     var filter by rememberSaveable { mutableStateOf("Tutte") }
+    var query by rememberSaveable { mutableStateOf("") }
     val c = MaterialTheme.colorScheme
-    val shown = list.filter { filter == "Tutte" || it.category == filter }
+    val words = query.trim().lowercase().split(Regex("\\s+")).filter(String::isNotBlank)
+    val shown = list.filter { n ->
+        (filter == "Tutte" || n.category == filter) &&
+            words.all { w -> w in n.title.lowercase() || w in n.category.lowercase() || n.attachments.any { w in it.name.lowercase() } }
+    }
     Screen {
+        item {
+            OutlinedTextField(
+                query, { query = it }, Modifier.fillMaxWidth().appear(0),
+                placeholder = { Text("Cerca nelle circolari") },
+                leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                trailingIcon = if (query.isNotEmpty()) { { IconButton({ query = "" }) { Icon(Icons.Rounded.Close, "Cancella") } } } else null,
+                singleLine = true, shape = CircleShape,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+            )
+        }
         if (categories.size > 2) item { ChipRow(categories, filter, { it }, Modifier.appear(0)) { filter = it } }
-        if (shown.isEmpty()) item { Empty("Nessuna comunicazione") }
-        animItems(shown, "n-$filter", 1) {
+        if (shown.isEmpty()) item { Empty(if (words.isEmpty()) "Nessuna comunicazione" else "Nessuna circolare trovata") }
+        animItems(shown, "n-$filter-${words.isEmpty()}", 1) {
             Item(
                 it.title, listOf(shortDate(it.date), it.category).filter(String::isNotBlank).joinToString(" · "),
                 when (it.attachments.size) {
@@ -876,3 +958,11 @@ fun TestsScreen(agenda: List<Event>, lessons: List<Lesson>, myNames: List<String
         }
     }
 }
+
+/** Etichetta "Nuovo" sui voti arrivati dall'ultima volta che si è aperta la scheda Voti. */
+@Composable
+fun NewBadge() = Text(
+    "Nuovo",
+    Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary).padding(horizontal = 8.dp, vertical = 2.dp),
+    color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
+)

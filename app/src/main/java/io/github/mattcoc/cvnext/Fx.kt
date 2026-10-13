@@ -199,6 +199,13 @@ private fun NavItem(s: Section, sel: Boolean, modifier: Modifier, onSelect: (Sec
                     .clip(CircleShape).background(c.secondaryContainer)
             )
             Crossfade(sel, label = "icon") { Icon(if (it) s.selected else s.icon, s.label, tint = fg) }
+            // Voti nuovi e circolari da leggere
+            val count = LocalBadges.current[s] ?: 0
+            if (count > 0) Text(
+                if (count > 99) "99+" else "$count",
+                Modifier.align(Alignment.TopEnd).padding(end = 6.dp).clip(CircleShape).background(c.error).padding(horizontal = 5.dp),
+                color = c.onError, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1
+            )
         }
         Spacer(Modifier.height(4.dp))
         Text(

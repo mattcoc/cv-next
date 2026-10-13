@@ -38,10 +38,12 @@ class HomeworkWidget : AppWidgetProvider() {
             val events = runCatching { api.agenda() }.getOrNull()
                 ?: runCatching { withContext(CacheOnly) { api.agenda() } }.getOrNull()
             val today = LocalDate.now().toString()
-            val homework = events.orEmpty().filter { it.homework && it.date >= today }
+            val done = DoneStore.of(context, api.current)
+            val upcoming = events.orEmpty().filter { it.homework && it.date >= today }
+            val homework = upcoming.filter { it.key !in done }
             val text = when {
                 events == null -> "Impossibile aggiornare i compiti"
-                homework.isEmpty() -> "Nessun compito in programma"
+                homework.isEmpty() -> if (upcoming.isEmpty()) "Nessun compito in programma" else "Hai fatto tutti i compiti"
                 else -> homework.take(6).joinToString("\n") { e ->
                     val what = e.notes.replace(Regex("\\s+"), " ").trim().let { if (it.length > 70) it.take(69) + "…" else it }
                     "${shortDate(e.date)} · ${e.subject.ifBlank { e.author }}: $what"
@@ -53,7 +55,7 @@ class HomeworkWidget : AppWidgetProvider() {
 
         private fun update(context: Context, ids: IntArray, who: String?, text: String) {
             val intent = Intent(context, MainActivity::class.java)
-                .putExtra("section", Section.Agenda.name)
+                .putExtra("section", "Compiti")
                 .putExtra("account", Api(context).current)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(context, 7, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

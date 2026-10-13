@@ -76,6 +76,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -513,6 +514,21 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
         }
     }
     val any = settings.alerts.isNotEmpty()
+    var info by remember { mutableStateOf(false) }
+    if (info) AlertDialog(
+        onDismissRequest = { info = false },
+        icon = { Icon(Icons.Rounded.Info, null) },
+        title = { Text("Come funzionano le notifiche") },
+        text = {
+            Text(
+                "CV Next non ha accesso ai server di Classeviva: controlla le novità dal telefono, circa una volta all'ora. " +
+                    "Per questo una notifica può arrivare con un po' di ritardo rispetto all'app ufficiale.\n\n" +
+                    "In cambio scegli tu cosa ricevere: voti, agenda, bacheca, materiale dei docenti, note, pagamenti, " +
+                    "quando sei tra gli interrogati e il promemoria della sera con i compiti del giorno dopo."
+            )
+        },
+        confirmButton = { TextButton({ info = false }) { Text("Ho capito") } }
+    )
     val last = remember { context.getSharedPreferences("seen", Context.MODE_PRIVATE).getLong("lastCheck", 0) }
     val status = when {
         !any -> "Disattivate"
@@ -526,8 +542,11 @@ private fun NotificationsCard(settings: Settings, api: Api?) {
             if (any) Icons.Rounded.NotificationsActive else Icons.Rounded.Notifications, "Notifiche", status, accent = true,
             onClick = { if (any) { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) } else withPermission { settings.toggleAll(true); askBattery() } },
             trailing = {
-                CheckSwitch(any) { on ->
-                    if (on) withPermission { settings.toggleAll(true); askBattery() } else { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton({ info = true }) { Icon(Icons.Rounded.Info, "Come funzionano le notifiche", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    CheckSwitch(any) { on ->
+                        if (on) withPermission { settings.toggleAll(true); askBattery() } else { settings.toggleAll(false); Notifier.schedule(context, settings.alerts) }
+                    }
                 }
             }
         )

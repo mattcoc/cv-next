@@ -1,0 +1,6 @@
+Novità
+• PagOnline dentro l'app: rate da pagare, scadute e già pagate, con importi e scadenze. Il sito si apre solo per pagare o scaricare l'avviso
+• Anno precedente dentro l'app: i voti dell'anno scorso con medie per materia e per periodo
+
+Correzioni
+• Impostazioni → Notifiche: nuova "i" che spiega perché le notifiche possono arrivare un po' dopo l'app ufficiale

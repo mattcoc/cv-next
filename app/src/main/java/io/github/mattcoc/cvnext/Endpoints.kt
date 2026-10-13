@@ -13,6 +13,9 @@ object Endpoints {
     const val USER_AGENT = "CVVS/std/4.1.7 Android/10"
     const val API_KEY = "Tg1NWEwNGIgIC0K"
 
+    /** Il registro web risponde solo ai browser. */
+    const val BROWSER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36"
+
     const val RELEASES = "https://api.github.com/repos/mattcoc/cv-next/releases/latest"
 
     /** L'anno scolastico inizia a settembre: a ottobre 2026 l'anno precedente è il 2025/26, ospitato su web25. */

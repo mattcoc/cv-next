@@ -127,6 +127,83 @@ fun className(raw: String) = raw.substringBefore(' ').substringBefore('(').trim(
 
 data class Payment(val id: String, val title: String, val amount: String, val due: String)
 
+/** Una rata di PagOnline, pagata o no. */
+data class Charge(val id: String, val title: String, val amount: String, val paid: String, val due: String, val settled: Boolean)
+
+/** Tutte le rate di PagOnline: da pagare, scadute e già pagate. */
+suspend fun Api.charges(): List<Charge> {
+    val raw = webPage(Endpoints.payments(studentId()))
+    val json = runCatching { JSONObject(raw) }.getOrNull()
+        ?: throw ApiException("Impossibile accedere ai pagamenti online (sessione web scaduta)")
+    return json.list("items").flatMap { e ->
+        e.list("payPlan").map {
+            val due = it.optDouble("amountDue", 0.0)
+            val paid = it.optDouble("amountPaid", 0.0)
+            Charge(
+                "${it.optLong("payId")}",
+                e.str("evtDesc").trim().lowercase().replaceFirstChar { c -> c.uppercase() },
+                num(due), num(paid), it.str("deadlineDate").take(10), paid >= due && due > 0 || it.optInt("payStatus") == 2
+            )
+        }
+    }.sortedBy { it.due }
+}
+
+private val sessionTabs = Regex("""<li><a href="#(S\d+)">(.*?)</a></li>""", RegexOption.DOT_MATCHES_ALL)
+private val subjectRow = Regex(
+    """<tr class="riga_materia_componente"[^>]*sessione="([^"]*)"[^>]*materia_id="[^"]*"(.*?)</tr>""", RegexOption.DOT_MATCHES_ALL
+)
+private val subjectName = Regex("""class="materia_desc"[^>]*>(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
+private val gradeCell = Regex(
+    """<td class="registro cella_voto[^"]*"[^>]*componente="(\d+)"[^>]*evento_codice="[^"]*"[^>]*evento_id="([^"]*)"[^>]*>(.*?)</td>""",
+    RegexOption.DOT_MATCHES_ALL
+)
+private val gradeDate = Regex("""class="voto_data cella_data">([^<]*)</span>""")
+private val gradeValue = Regex("""class="([^"]*cella_div[^"]*)"[^>]*title="([^"]*)"[^>]*>\s*<p[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
+
+private fun htmlText(s: String) = android.text.Html.fromHtml(s, android.text.Html.FROM_HTML_MODE_LEGACY).toString().replace('\u00a0', ' ').trim()
+
+/** "7½", "7+", "6-", "7 1/2" in numero; i giudizi a lettere restano senza valore. */
+fun gradeNumber(raw: String): Double? {
+    var v = raw.replace(" ", "").replace("1/2", "½")
+    var delta = 0.0
+    while (v.isNotEmpty() && v.last() in "½+-") {
+        delta += when (v.last()) { '½' -> 0.5; '+' -> 0.25; else -> -0.25 }
+        v = v.dropLast(1)
+    }
+    return v.replace(',', '.').toDoubleOrNull()?.plus(delta)
+}
+
+/**
+ * Voti dell'anno precedente, letti dalla pagina del registro web di quell'anno
+ * (l'API dell'app non li restituisce più a fine anno).
+ */
+suspend fun Api.lastYearGrades(): List<Grade> {
+    val page = lastYearPage("/cvv/app/default/genitori_voti.php")
+    val start = schoolYear().first.year - 1
+    val periods = sessionTabs.findAll(page).associate { it.groupValues[1] to htmlText(it.groupValues[2]) }
+    val types = mapOf("1" to "Scritto/Grafico", "2" to "Orale", "3" to "Pratico")
+    return subjectRow.findAll(page).flatMap { row ->
+        val session = row.groupValues[1]
+        val body = row.groupValues[2]
+        val subject = subjectName.find(body)?.let { htmlText(it.groupValues[1]) }.orEmpty().pretty()
+        gradeCell.findAll(body).mapNotNull { cell ->
+            if (cell.groupValues[2].isBlank()) return@mapNotNull null
+            val content = cell.groupValues[3]
+            val v = gradeValue.find(content) ?: return@mapNotNull null
+            val value = htmlText(v.groupValues[3]).ifBlank { return@mapNotNull null }
+            val short = gradeDate.find(content)?.let { htmlText(it.groupValues[1]) }.orEmpty()
+            val date = short.split("/").mapNotNull { it.trim().toIntOrNull() }.takeIf { it.size >= 2 }?.let { (d, m) ->
+                runCatching { LocalDate.of(if (m >= 9) start else start + 1, m, d).toString() }.getOrNull()
+            }.orEmpty()
+            Grade(
+                subject, date, value, gradeNumber(value), types[cell.groupValues[1]] ?: v.groupValues[2],
+                "", periods[session] ?: session, session.drop(1).toIntOrNull() ?: 0,
+                "f_reg_voto_dettaglio" !in v.groupValues[1], cell.groupValues[2].toLongOrNull() ?: 0
+            )
+        }
+    }.toList().sortedByDescending { it.date }
+}
+
 suspend fun Api.payments(): List<Payment> {
     val raw = webPage(Endpoints.payments(studentId()))
     val json = runCatching { JSONObject(raw) }.getOrNull()

@@ -72,6 +72,7 @@ import androidx.compose.material.icons.rounded.Grade
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Settings as SettingsIcon
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -184,6 +185,15 @@ class MainActivity : ComponentActivity() {
                             NotificationInvite(settings) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
+                        "payments" -> SubScreen("PagOnline", {}) {
+                            PaymentsScreen(
+                                listOf(
+                                    Charge("1", "Contributo volontario a.s. 2026/27", "50,00", "0,00", LocalDate.now().plusDays(20).toString(), false),
+                                    Charge("2", "Uscita didattica a Venezia", "35,00", "0,00", LocalDate.now().minusDays(3).toString(), false),
+                                    Charge("3", "Assicurazione scolastica", "8,50", "8,50", LocalDate.now().minusDays(30).toString(), true)
+                                )
+                            ) {}
+                        }
                         "tests" -> SubScreen("Verifiche e interrogazioni", {}) { TestsScreen(DebugData.agenda, DebugData.lessons) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
                         "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
@@ -433,6 +443,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
     val grades = remember { Res { api.grades() } }
     val agenda = remember { Res { api.agenda() } }
     val yearAgenda = remember { Res { schoolYear().let { (from, to) -> api.agenda(from, to) } } }
+    val charges = remember { Res { api.charges() } }
+    val lastYear = remember { Res { api.lastYearGrades() } }
     val absences = remember { Res { api.absences() } }
     val notices = remember { Res { api.notices() } }
     val notes = remember { Res { api.notes() } }
@@ -504,7 +516,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                         Section.Oggi -> Refreshable(lessons, grades, agenda, absences) {
                             TodayScreen(
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
-                                { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
+                                { section = it }, { stack.add(Page.Payments) },
                                 update, { stack.add(Page.Preferences) }, { update = null },
                                 api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty(),
                                 { stack.add(Page.Tests) }
@@ -550,6 +562,19 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                     Page.Didactics -> SubScreen("File dei docenti", back) { Lazy(didactics) { DidacticsScreen(api, didactics.data!!) { stack.add(it) } } }
                     Page.Documents -> SubScreen("Scrutini", back) { Lazy(documents) { DocumentsScreen(api, documents.data!!) { stack.add(it) } } }
                     Page.Lessons -> SubScreen("Lezioni", back) { Refreshable(lessons) { LessonsScreen(lessons.data!!) } }
+                    Page.Payments -> SubScreen("PagOnline", back) {
+                        Lazy(charges) { PaymentsScreen(charges.data!!) { stack.add(Page.Web("PagOnline", WebLinks.payments)) } }
+                    }
+                    Page.LastYear -> SubScreen("Anno ${schoolYear().first.year - 1}/${schoolYear().first.year % 100}", back, actions = {
+                        IconButton({ stack.add(Page.Web("Anno precedente", WebLinks.lastYear)) }) {
+                            Icon(Icons.Rounded.Language, "Apri il registro web dell'anno precedente")
+                        }
+                    }) {
+                        Lazy(lastYear) {
+                            if (lastYear.data!!.isEmpty()) Message("Nessun voto trovato per l'anno precedente. Con il pulsante in alto apri il registro web di quell'anno.")
+                            else GradesScreen(lastYear.data!!, emptyList())
+                        }
+                    }
                     Page.Tests -> SubScreen("Verifiche e interrogazioni", back) {
                         Lazy(yearAgenda) {
                             TestsScreen(

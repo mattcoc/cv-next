@@ -175,6 +175,57 @@ class Api(context: Context, private val fixed: String? = null) {
         html
     }
 
+    /**
+     * Pagina del registro web dell'anno precedente. La sessione va prima "estesa" al server di quell'anno
+     * (webYY) con il giro di accesso interno di Classeviva, seguendo a mano i rimandi per tenere i cookie.
+     */
+    suspend fun lastYearPage(path: String): String = withContext(Dispatchers.IO) {
+        requireOnline()
+        webSession()
+        val host = Endpoints.lastYearHost()
+        var url = follow(WebLinks.lastYear, "${Endpoints.WEB}/home/app/default/menu_webinfoschool_studenti.php")
+        if (!url.startsWith(host)) throw ApiException("Il registro dell'anno precedente non è raggiungibile")
+        url = "$host$path"
+        val c = browser(url)
+        val code = c.responseCode
+        val html = (if (code < 400) c.inputStream else c.errorStream)?.use { String(it.readBytes()) }.orEmpty()
+        val landed = c.url.toString()
+        c.disconnect()
+        if (code >= 400 || "login.php" in landed) throw ApiException("Il registro dell'anno precedente non è raggiungibile")
+        html
+    }
+
+    /** Connessione come da browser (il portale web rifiuta l'app) con i cookie della sessione web. */
+    private fun browser(url: String, referer: String? = null, redirects: Boolean = true): HttpURLConnection {
+        val c = URI(url).toURL().openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000
+        c.readTimeout = 30_000
+        c.instanceFollowRedirects = redirects
+        c.setRequestProperty("User-Agent", Endpoints.BROWSER_AGENT)
+        c.setRequestProperty("Accept-Language", "it-IT,it;q=0.9")
+        c.setRequestProperty("Cookie", CookieManager.getInstance().getCookie(url).orEmpty())
+        referer?.let { c.setRequestProperty("Referer", it) }
+        return c
+    }
+
+    /** Segue i rimandi uno per uno salvando i cookie di ogni passaggio; restituisce l'indirizzo finale. */
+    private fun follow(start: String, referer: String): String {
+        val manager = CookieManager.getInstance()
+        var url = start
+        repeat(10) {
+            val c = browser(url, referer, redirects = false)
+            val code = c.responseCode
+            c.headerFields.filterKeys { it.equals("Set-Cookie", true) }.values.flatten().forEach { manager.setCookie(url, it) }
+            val location = c.getHeaderField("Location")
+            runCatching { (if (code < 400) c.inputStream else c.errorStream)?.use { it.readBytes() } }
+            c.disconnect()
+            if (code !in 300..399 || location == null) return url.also { manager.flush() }
+            url = URI(url).resolve(location).toString()
+        }
+        manager.flush()
+        return url
+    }
+
     suspend fun webSession() = withContext(Dispatchers.IO) {
         requireOnline()
         val acc = account() ?: return@withContext false

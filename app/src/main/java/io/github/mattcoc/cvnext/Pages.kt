@@ -62,6 +62,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -105,6 +106,8 @@ sealed interface Page {
     data object Documents : Page
     data object Lessons : Page
     data object Tests : Page
+    data object Payments : Page
+    data object LastYear : Page
     data object Preferences : Page
 }
 
@@ -138,16 +141,16 @@ fun FunctionsScreen(open: (Page) -> Unit, onHomework: () -> Unit, goto: (Section
         Fn("Agenda", Icons.Rounded.CalendarMonth) { goto(Section.Agenda) },
         Fn("Lezioni", Icons.Rounded.CoPresent) { open(Page.Lessons) },
         Fn("File dei docenti", Icons.Rounded.FolderShared) { open(Page.Didactics) },
-        Fn("Compiti", Icons.AutoMirrored.Rounded.Assignment) { onHomework() }
+        Fn("Compiti", Icons.AutoMirrored.Rounded.Assignment) { onHomework() },
+        Fn("PagOnline", Icons.Rounded.CreditCard) { open(Page.Payments) },
+        Fn("Anno precedente", Icons.Rounded.History) { open(Page.LastYear) }
     )
     val web = listOf(
         Fn("Colloqui", Icons.Rounded.Groups, true) { open(Page.Web("Colloqui", WebLinks.meetings)) },
         Fn("Sportello", Icons.Rounded.SupportAgent, true) { open(Page.Web("Sportello", WebLinks.desk)) },
-        Fn("PagOnline", Icons.Rounded.CreditCard, true) { open(Page.Web("PagOnline", WebLinks.payments)) },
         Fn("Progettiamo la Scuola", Icons.AutoMirrored.Rounded.MenuBook, true) { open(Page.Web("Progettiamo la Scuola", WebLinks.projects)) },
         Fn("Certificazioni", Icons.Rounded.WorkspacePremium, true) { open(Page.Web("Certificazioni", WebLinks.certificates)) },
-        Fn("Registro Web", Icons.Rounded.Language, true) { open(Page.Web("Registro Web", WebLinks.home)) },
-        Fn("Anno precedente", Icons.Rounded.History, true) { open(Page.Web("Anno precedente", WebLinks.lastYear)) }
+        Fn("Registro Web", Icons.Rounded.Language, true) { open(Page.Web("Registro Web", WebLinks.home)) }
     )
     val columns = if (LocalWide.current) 5 else 3
     Screen {
@@ -419,4 +422,56 @@ object WebLinks {
     const val reports = "$WEB/sol/app/default/documenti_sol.php?quad=1"
     const val projects = "$WEB/pdp/app/default/lista_pfi_studente.php"
     val lastYear get() = "$WEB/home/app/default/xasapi.php?a=lap&bu=${Endpoints.lastYearHost()}&ru=/home/&fu=xasapi-ERROR.php"
+}
+
+/** PagOnline senza aprire il sito: rate da pagare, scadute e pagate. Per pagare o scaricare l'avviso si apre il registro. */
+@Composable
+fun PaymentsScreen(charges: List<Charge>, onPay: () -> Unit) {
+    val today = remember { LocalDate.now().toString() }
+    val open = charges.filter { !it.settled }
+    val late = open.filter { it.due.isNotBlank() && it.due < today }
+    val next = open - late.toSet()
+    val paid = charges.filter { it.settled }.sortedByDescending { it.due }
+    val c = MaterialTheme.colorScheme
+    Screen {
+        if (charges.isEmpty()) item { Empty("Nessun pagamento richiesto dalla scuola", Icons.Rounded.CreditCard) }
+        if (open.isNotEmpty()) item {
+            Box(Modifier.appear(0)) {
+                Item(
+                    "Paga o scarica l'avviso", null, "Si apre la pagina di PagOnline del registro, con pagoPA",
+                    onClick = onPay,
+                    leading = { IconCircle(Icons.Rounded.CreditCard, c.primaryContainer, c.onPrimaryContainer) },
+                    trailing = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, tint = c.onSurfaceVariant) }
+                )
+            }
+        }
+        if (late.isNotEmpty()) {
+            item { Box(Modifier.appear(1)) { Header("Scaduti (${late.size})") } }
+            animItems(late, "late", 2) { ChargeItem(it, c.errorContainer to c.onErrorContainer, "Scaduto") }
+        }
+        if (next.isNotEmpty()) {
+            item { Box(Modifier.appear(1)) { Header("Da pagare (${next.size})") } }
+            animItems(next, "next", 2) { ChargeItem(it, c.secondaryContainer to c.onSecondaryContainer, "Da pagare") }
+        }
+        if (paid.isNotEmpty()) {
+            item { Box(Modifier.appear(3)) { Header("Pagati (${paid.size})") } }
+            animItems(paid, "paid", 4) { ChargeItem(it, c.surfaceContainerHighest to c.onSurfaceVariant, "Pagato") }
+        }
+    }
+}
+
+@Composable
+private fun ChargeItem(charge: Charge, colors: Pair<Color, Color>, state: String) {
+    val c = MaterialTheme.colorScheme
+    Item(
+        charge.title, if (charge.due.isNotBlank()) "Entro il ${longDate(charge.due)}" else null,
+        if (charge.settled) "Pagato € ${charge.paid}" else null,
+        leading = { IconCircle(Icons.Rounded.CreditCard, colors.first, colors.second) },
+        trailing = {
+            Column(horizontalAlignment = Alignment.End) {
+                Text("€ ${charge.amount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(state, style = MaterialTheme.typography.labelMedium, color = if (state == "Scaduto") c.error else c.onSurfaceVariant)
+            }
+        }
+    )
 }

@@ -198,19 +198,21 @@ struct ItemRow: View {
     var bold = false
     var footer: String? = nil
     var interactive = false
+    var done = false
     var leading: AnyView? = nil
     var trailing: AnyView? = nil
 
     var body: some View {
         HStack(spacing: 14) {
-            if let leading { leading }
+            if let leading { leading.opacity(done ? 0.5 : 1) }
             VStack(alignment: .leading, spacing: 3) {
                 if let o = overline?.ifBlank { Text(o).font(.caption).foregroundStyle(.subtle) }
-                Text(headline).font(.body.weight(bold ? .bold : .medium)).foregroundStyle(.primary)
+                Text(headline).font(.body.weight(bold ? .bold : .medium)).foregroundStyle(.primary).strikethrough(done)
                 if let s = supporting?.ifBlank { ExpandableText(text: s) }
                 if let f = footer?.ifBlank { Text(f).font(.caption).foregroundStyle(.subtle).padding(.top, 2) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(done ? 0.55 : 1)
             if let trailing { trailing }
         }
         .glassCard(interactive: interactive)
@@ -333,8 +335,11 @@ struct EventRow: View {
     let teachers: Teachers
     var showDate = false
     var mine = false
+    @Environment(Model.self) private var model
     var body: some View {
         let subject = teachers.subject(event)
+        // I compiti si spuntano quando sono fatti: restano barrati.
+        let done = event.homework && model.done.isDone(event)
         ItemRow(
             headline: subject.ifBlank ?? event.author.ifBlank ?? event.kind,
             overline: [event.kind, showDate ? shortDate(event.date) : nil,
@@ -343,7 +348,20 @@ struct EventRow: View {
                        mine ? "Ci sei anche tu" : nil].compactMap { $0 }.joined(separator: " · "),
             supporting: event.notes.tidy, bold: mine,
             footer: subject.trimmed.isEmpty ? nil : event.author,
-            leading: AnyView(EventIcon(event: event))
+            done: done,
+            leading: AnyView(EventIcon(event: event)),
+            trailing: event.homework ? AnyView(
+                Button {
+                    withAnimation(.snappy) { model.done.toggle(event) }
+                } label: {
+                    Image(systemName: done ? "checkmark.circle.fill" : "circle").font(.title2)
+                        .foregroundStyle(done ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.success, trigger: done) { _, new in new }
+                .accessibilityLabel(done ? "Segna come da fare" : "Segna come fatto")
+            ) : nil
         )
     }
 }
@@ -352,6 +370,7 @@ struct TestRow: View {
     let event: Event
     let teachers: Teachers
     var mine = false
+    @State private var calendar = false
     var body: some View {
         let days = Day.between(Day.today, Day.parse(event.date) ?? Day.today)
         let subject = teachers.subject(event)
@@ -362,14 +381,26 @@ struct TestRow: View {
             footer: subject.trimmed.isEmpty ? nil : event.author,
             leading: AnyView(EventIcon(event: event)),
             trailing: AnyView(
-                Text(days == 0 ? "Oggi" : days == 1 ? "Domani" : days == -1 ? "Ieri" : days < 0 ? "\(-days) giorni fa" : "Tra \(days) giorni")
-                    .font(.caption.bold())
-                    // Le prove già fatte restano in grigio, senza colore.
-                    .foregroundStyle(days < 0 ? Color.secondary : Color.primary)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .glassEffect(days < 0 ? Glass.regular : Glass.regular.tint((days <= 1 ? Color.red : Color.secondary).opacity(0.3)), in: .capsule)
+                VStack(spacing: 8) {
+                    Text(days == 0 ? "Oggi" : days == 1 ? "Domani" : days == -1 ? "Ieri" : days < 0 ? "\(-days) giorni fa" : "Tra \(days) giorni")
+                        .font(.caption.bold())
+                        // Le prove già fatte restano in grigio, senza colore.
+                        .foregroundStyle(days < 0 ? Color.secondary : Color.primary)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .glassEffect(days < 0 ? Glass.regular : Glass.regular.tint((days <= 1 ? Color.red : Color.secondary).opacity(0.3)), in: .capsule)
+                    if days >= 0 {
+                        Button { calendar = true } label: { Image(systemName: "calendar.badge.plus").font(.title3) }
+                            .buttonStyle(.plain).foregroundStyle(.tint)
+                            .accessibilityLabel("Aggiungi al calendario")
+                    }
+                }
             )
         )
+        .sheet(isPresented: $calendar) {
+            CalendarEditor(title: [event.testKind, subject.ifBlank ?? event.author].filter { !$0.trimmed.isEmpty }.joined(separator: " di "),
+                           date: event.date, notes: [event.notes.tidy, event.author].filter { !$0.trimmed.isEmpty }.joined(separator: "\n"))
+                .ignoresSafeArea()
+        }
     }
 }
 
@@ -515,5 +546,15 @@ struct ChipRow<T: Hashable>: View {
         }
         .scrollIndicators(.hidden)
         .padding(.horizontal, -16)
+    }
+}
+
+
+/// Badge "Nuovo" sui voti arrivati dall'ultima volta che si è aperta la scheda Voti.
+struct NewBadge: View {
+    var body: some View {
+        Text("Nuovo").font(.caption2.bold()).foregroundStyle(.white)
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(.tint, in: .capsule)
     }
 }

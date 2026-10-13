@@ -66,12 +66,16 @@ struct GradesView: View {
         }
         if bySubject {
             ForEach(subjectNames, id: \.self) { subject in
-                NavigationLink(value: Page.subject(subject)) { SubjectRow(subject: subject, list: bySubjectMap[subject] ?? []) }.buttonStyle(.plain)
+                NavigationLink(value: Page.subject(subject)) {
+                    SubjectRow(subject: subject, list: bySubjectMap[subject] ?? [], new: (bySubjectMap[subject] ?? []).contains { model.freshGrades.contains($0.key) })
+                }.buttonStyle(.plain)
             }
         } else {
+            let fresh = model.freshGrades
             ForEach(Array(grades.enumerated()), id: \.offset) { _, g in
                 ItemRow(headline: g.subject, overline: [shortDate(g.date), g.type].filter { !$0.isEmpty }.joined(separator: " · "),
-                        supporting: g.notes, leading: AnyView(GradeCircle(grade: g)))
+                        supporting: g.notes, bold: fresh.contains(g.key), leading: AnyView(GradeCircle(grade: g)),
+                        trailing: fresh.contains(g.key) ? AnyView(NewBadge()) : nil)
             }
         }
     }
@@ -139,6 +143,7 @@ private struct AverageCard: View {
 private struct SubjectRow: View {
     let subject: String
     let list: [Grade]
+    var new = false
 
     var body: some View {
         let avg = list.gradeAvg
@@ -146,7 +151,10 @@ private struct SubjectRow: View {
             AverageRing(avg: avg)
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(subject).font(.headline).lineLimit(2).multilineTextAlignment(.leading)
+                    HStack(spacing: 8) {
+                        Text(subject).font(.headline).lineLimit(2).multilineTextAlignment(.leading)
+                        if new { NewBadge() }
+                    }
                     if avg == nil { Text("Nessun voto che fa media").font(.caption).foregroundStyle(.subtle) }
                     else if let avg, avg < 6 { Text("Da recuperare").font(.caption.weight(.semibold)).foregroundStyle(.red) }
                 }

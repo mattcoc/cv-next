@@ -19,7 +19,8 @@ struct AgendaView: View {
         let homework = events.filter { $0.homework && $0.date >= todayIso }
         let past = events.filter { $0.homework && $0.date < todayIso }.sorted { $0.date > $1.date }
 
-        ChipRow(options: ["Tutto", "Compiti"], selected: $filter) { $0 == "Compiti" ? "Compiti · \(homework.count)" : $0 }
+        let todo = homework.filter { !model.done.isDone($0) }.count
+        ChipRow(options: ["Tutto", "Compiti"], selected: $filter) { $0 == "Compiti" ? "Compiti · \(todo)" : $0 }
 
         if filter == "Tutto" {
             let sel = Day.iso(selected)

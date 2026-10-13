@@ -54,6 +54,16 @@ enum AlertKind: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Dove porta il tocco sulla notifica (le circolari aprono direttamente la comunicazione).
+    var target: String {
+        switch self {
+        case .notices: "notices"
+        case .grades: "grades"
+        case .homework, .mentions: "homework"
+        case .didactics, .notes, .payments: "today"
+        }
+    }
+
     /// Le notifiche scelte, salvate come "grades,notices".
     static var enabled: Set<AlertKind> {
         get { Set((UserDefaults.standard.string(forKey: "alerts") ?? "").split(separator: ",").compactMap { AlertKind(rawValue: String($0)) }) }
@@ -108,7 +118,10 @@ enum Checker {
                 let key = "seen-\(alert.rawValue)-\(account.key)"
                 if let seen = defaults.stringArray(forKey: key).map(Set.init) {
                     for item in items.filter({ !seen.contains($0.0) }).prefix(5) {
-                        await post(alert, id: "\(alert.rawValue)-\(account.key)-\(item.0)", text: who + item.1)
+                        // Una circolare si apre direttamente toccando la notifica.
+                        let target = alert == .notices ? "notice:\(item.0)" : alert.target
+                        await post(alert, id: "\(alert.rawValue)-\(account.key)-\(item.0)", text: who + item.1,
+                                   info: ["target": target, "account": account.key])
                     }
                 }
                 // Tiene solo gli id ancora presenti, così l'elenco non cresce all'infinito.
@@ -118,8 +131,9 @@ enum Checker {
         defaults.set(Date().timeIntervalSince1970, forKey: "lastCheck")
     }
 
-    private static func post(_ alert: AlertKind, id: String, text: String) async {
+    private static func post(_ alert: AlertKind, id: String, text: String, info: [String: String] = [:]) async {
         let content = UNMutableNotificationContent()
+        content.userInfo = info
         content.title = alert.single
         content.body = text
         content.sound = .default

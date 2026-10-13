@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 @MainActor
 protocol Loadable: AnyObject {
@@ -69,9 +70,18 @@ final class Model {
     let school: Res<School>
     let payments: Res<[Payment]>
     let reminders = ReminderStore()
+    let done: DoneStore
+    let seen: SeenGrades
+    /// Percorsi di Home e Bacheca: servono per aprire una pagina da una notifica o da una scorciatoia.
+    var todayPath = NavigationPath()
+    var noticePath = NavigationPath()
+    /// Chiavi dei voti arrivati dall'ultima volta che si è aperta la scheda Voti.
+    var freshGrades: Set<String> { seen.fresh(grades.data ?? []) }
 
     init(api: Api) {
         self.api = api
+        done = DoneStore(account: api.current)
+        seen = SeenGrades(account: api.current)
         let today = Day.today
         lessons = Res { try await api.lessons(from: Day.add(today, -30), to: today) }
         grades = Res { try await api.grades() }
@@ -91,6 +101,8 @@ final class Model {
     init(debug: Void) {
         api = Api(fixed: "debug")
         debugName = "Marco Rossi"
+        done = DoneStore(account: "debug")
+        seen = SeenGrades(account: "debug")
         lessons = Res(value: DebugData.lessons)
         grades = Res(value: DebugData.grades)
         agenda = Res(value: DebugData.agenda)
@@ -124,6 +136,7 @@ final class Model {
     func loadAll() async {
         guard debugName == nil else { return }
         await refresh([lessons, grades, agenda, absences, notices, periods, school, payments])
+        if let g = grades.data { seen.start(g) }
     }
 }
 

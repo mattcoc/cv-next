@@ -123,9 +123,20 @@ extension Api {
     func attachment(_ n: Notice, _ a: Attachment) async throws -> URL {
         let file = Api.downloads.appendingPathComponent("notice_\(n.id)_\(a.num).pdf")
         if let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 0 { return file }
-        var data = try? await bytes("/noticeboard/attach/\(n.code)/\(n.id)/\(a.num)")
-        if data?.isPdf != true { data = try await bytes("/noticeboard/attach/\(n.code)/\(n.id)/101") }
-        guard let data, data.isPdf else { throw ApiError("Il file non è un PDF") }
+        func download() async -> Data? {
+            if let d = try? await bytes("/noticeboard/attach/\(n.code)/\(n.id)/\(a.num)"), d.isPdf { return d }
+            if let d = try? await bytes("/noticeboard/attach/\(n.code)/\(n.id)/101"), d.isPdf { return d }
+            return nil
+        }
+        // Una circolare appena arrivata (ad esempio aperta da una notifica) dà 404 sugli allegati finché non risulta letta:
+        // se il primo tentativo fallisce la segna come letta e riprova.
+        var data = await download()
+        if data == nil {
+            _ = try? await readNotice(n)
+            try? await Task.sleep(for: .milliseconds(800))
+            data = await download()
+        }
+        guard let data else { throw ApiError("Allegato non ancora disponibile. Riprova tra qualche secondo.") }
         try data.write(to: file)
         return file
     }

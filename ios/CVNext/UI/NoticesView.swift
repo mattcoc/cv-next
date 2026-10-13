@@ -4,19 +4,26 @@ import QuickLook
 struct NoticesView: View {
     @Environment(Model.self) private var model
     @State private var filter = "Tutte"
+    @State private var query = ""
 
     var body: some View {
         Screen(refresh: { await model.refresh([model.notices]) }) {
             Loaded(model.notices) { content }
         }
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Cerca nelle circolari")
     }
 
     @ViewBuilder private var content: some View {
         let list = model.notices.data ?? []
         let categories = ["Tutte"] + uniqueCategories(list)
-        let shown = list.filter { filter == "Tutte" || $0.category == filter }
+        let words = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
+        let shown = list.filter { n in
+            (filter == "Tutte" || n.category == filter) && words.allSatisfy { w in
+                n.title.lowercased().contains(w) || n.category.lowercased().contains(w) || n.attachments.contains { $0.name.lowercased().contains(w) }
+            }
+        }
         if categories.count > 2 { ChipRow(options: categories, selected: $filter) { $0 } }
-        if shown.isEmpty { EmptyCard(text: "Nessuna comunicazione") }
+        if shown.isEmpty { EmptyCard(text: words.isEmpty ? "Nessuna comunicazione" : "Nessuna circolare trovata") }
         ForEach(Array(shown.enumerated()), id: \.offset) { _, n in
             NavigationLink(value: Page.notice(n)) { NoticeRow(notice: n) }.buttonStyle(.plain)
         }
@@ -114,6 +121,8 @@ struct NoticeView: View {
     private func open(_ a: Attachment) {
         opening = a.num
         Task {
+            // Prima la circolare va segnata come letta, altrimenti Classeviva risponde 404 sull'allegato.
+            if text == nil { await load() }
             do { preview = try await model.api.attachment(notice, a) } catch { failed = error.userText }
             opening = nil
         }

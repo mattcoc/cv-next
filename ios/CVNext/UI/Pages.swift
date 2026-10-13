@@ -4,11 +4,13 @@ import QuickLook
 
 struct FunctionsView: View {
     @Environment(Model.self) private var model
+    @Environment(\.openURL) private var openURL
 
     private struct Fn: Identifiable {
         let label: String, icon: String, color: Color
         var tab: AppTab? = nil
         var page: Page? = nil
+        var url: String? = nil
         var id: String { label }
     }
 
@@ -25,7 +27,8 @@ struct FunctionsView: View {
     ]
 
     private let web: [Fn] = [
-        Fn(label: "Colloqui", icon: "person.2.fill", color: .purple, page: .web("Colloqui", WebLinks.meetings)),
+        // Dentro l'app la pagina dei colloqui non funziona: si apre in Safari, sul sito di Classeviva.
+        Fn(label: "Colloqui", icon: "person.2.fill", color: .purple, url: WebLinks.meetings),
         Fn(label: "Sportello", icon: "questionmark.bubble.fill", color: .mint, page: .web("Sportello", WebLinks.desk)),
         Fn(label: "PagOnline", icon: "creditcard.fill", color: .orange, page: .web("PagOnline", WebLinks.payments)),
         Fn(label: "Progettiamo la Scuola", icon: "book.fill", color: .brown, page: .web("Progettiamo la Scuola", WebLinks.projects)),
@@ -58,6 +61,8 @@ struct FunctionsView: View {
                     Button { model.tab = tab } label: { tile }.buttonStyle(.plain)
                 } else if let page = fn.page {
                     NavigationLink(value: page) { tile }.buttonStyle(.plain)
+                } else if let url = fn.url.flatMap(URL.init(string:)) {
+                    Button { openURL(url) } label: { tile }.buttonStyle(.plain)
                 }
             }
         }
@@ -127,7 +132,8 @@ struct NotesView: View {
                 ForEach(Array(list.enumerated()), id: \.offset) { _, n in
                     let color: Color = n.type == "Nota disciplinare" || n.type == "Sanzione disciplinare" ? .red : n.type == "Richiamo" ? .orange : .blue
                     ItemRow(headline: n.type, overline: [longDate(n.date), n.author].filter { !$0.trimmed.isEmpty }.joined(separator: " · "),
-                            supporting: n.text, leading: AnyView(IconBadge(icon: "exclamationmark.bubble.fill", color: color)))
+                            supporting: n.text, bold: !n.read, leading: AnyView(IconBadge(icon: "exclamationmark.bubble.fill", color: color)),
+                            trailing: n.read ? nil : AnyView(NewBadge()))
                 }
             }
         }

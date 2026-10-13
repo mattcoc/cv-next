@@ -25,6 +25,7 @@ struct TodayView: View {
         let todayIso = Day.iso(today)
         let limit = Day.iso(Day.add(today, 14))
         let tests = agenda.filter { $0.isTest && $0.date >= todayIso && $0.date <= limit }
+        let fresh = model.freshGrades
         VStack(alignment: .leading, spacing: 4) {
             Text("Ciao \(model.name.firstWord.pretty)").font(.largeTitle.weight(.bold))
             Text(longDate(todayIso)).foregroundStyle(.subtle)
@@ -90,7 +91,11 @@ struct TodayView: View {
                 ForEach(Array(grades.prefix(10).enumerated()), id: \.offset) { _, g in
                     Button { model.tab = .grades } label: {
                         VStack(alignment: .leading, spacing: 8) {
-                            GradeCircle(grade: g)
+                            HStack(alignment: .top) {
+                                GradeCircle(grade: g)
+                                Spacer(minLength: 0)
+                                if fresh.contains(g.key) { NewBadge() }
+                            }
                             Text(g.subject).font(.subheadline.weight(.medium)).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
                             Text(shortDate(g.date)).font(.caption).foregroundStyle(.subtle)
                         }

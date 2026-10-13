@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var checking = false
     @State private var cleared = false
     @AppStorage("autoUpdate") private var autoUpdate = true
+    @AppStorage("lock") private var lock = false
     @State private var updateState: UpdateState = .idle
     @State private var refreshStatus = UIApplication.shared.backgroundRefreshStatus
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -129,6 +130,14 @@ struct SettingsView: View {
                     Text("Il tuo nome in agenda")
                 } footer: {
                     Text("Separati da virgola. Servono per \"Ci sei anche tu\" e per la notifica quando sei nominato, ad esempio tra gli interrogati.")
+                }
+            }
+
+            if lock || AppLock.available {
+                Section {
+                    Toggle(isOn: $lock) { Label("Blocca con \(AppLock.biometryName)", systemImage: AppLock.biometryName == "Face ID" ? "faceid" : "lock") }
+                } header: { Text("Sicurezza") } footer: {
+                    Text("All'apertura, e tornando sull'app dopo un minuto, chiede \(AppLock.biometryName == "codice" ? "il codice" : AppLock.biometryName) o il codice del telefono.")
                 }
             }
 

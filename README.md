@@ -11,14 +11,25 @@ App Android non ufficiale per consultare il registro elettronico ClasseViva, con
 > L'app usa il servizio ClasseViva con le credenziali dell'utente. Uso a proprio rischio.
 
 
+<p align="center"><b>Android</b></p>
 <p align="center">
-  <img src="docs/screenshots/today.jpg" width="19%" alt="Oggi">
-  <img src="docs/screenshots/grades.jpg" width="19%" alt="Voti">
-  <img src="docs/screenshots/subject.jpg" width="19%" alt="Dettaglio materia">
-  <img src="docs/screenshots/absences.jpg" width="19%" alt="Assenze">
-  <img src="docs/screenshots/settings.jpg" width="19%" alt="Impostazioni">
+  <img src="docs/screenshots/today.jpg" width="15%" alt="Oggi">
+  <img src="docs/screenshots/day.jpg" width="15%" alt="Giornata">
+  <img src="docs/screenshots/grades.jpg" width="15%" alt="Voti">
+  <img src="docs/screenshots/subject.jpg" width="15%" alt="Dettaglio materia">
+  <img src="docs/screenshots/tests.jpg" width="15%" alt="Verifiche e interrogazioni">
+  <img src="docs/screenshots/settings.jpg" width="15%" alt="Impostazioni">
 </p>
-<p align="center"><sub>Schermate con dati di esempio.</sub></p>
+<p align="center"><b>iPhone</b></p>
+<p align="center">
+  <img src="docs/screenshots/ios/today.jpg" width="15%" alt="Oggi">
+  <img src="docs/screenshots/ios/day.jpg" width="15%" alt="Giornata">
+  <img src="docs/screenshots/ios/grades.jpg" width="15%" alt="Voti">
+  <img src="docs/screenshots/ios/subject.jpg" width="15%" alt="Dettaglio materia">
+  <img src="docs/screenshots/ios/tests.jpg" width="15%" alt="Verifiche e interrogazioni">
+  <img src="docs/screenshots/ios/settings.jpg" width="15%" alt="Impostazioni">
+</p>
+<p align="center"><sub>Schermate con dati e nomi di esempio.</sub></p>
 
 ## Funzioni
 

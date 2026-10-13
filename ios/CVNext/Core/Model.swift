@@ -104,7 +104,10 @@ final class Model {
         school = Res(value: School(name: "Istituto Tecnico", city: "Padova PD"))
         payments = Res(value: [])
         reminders.debug()
-        update = IosRelease(build: 999, date: nil, ipa: URL(string: "https://example.com/CVNext.ipa")!)
+        // Il banner di aggiornamento solo se richiesto: le schermate per GitHub restano pulite.
+        if ProcessInfo.processInfo.arguments.contains("-debugUpdate") {
+            update = IosRelease(build: 999, date: nil, ipa: URL(string: "https://example.com/CVNext.ipa")!)
+        }
     }
 
     var name: String { debugName ?? api.name }

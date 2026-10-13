@@ -84,6 +84,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -137,12 +138,14 @@ fun Screen(content: LazyListScope.() -> Unit) {
     val wide = LocalWide.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val side = sideMargin(maxWidth)
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(side, 8.dp, side, bottom + if (wide) 24.dp else 104.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = content
-        )
+        CompositionLocalProvider(LocalSide provides side) {
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(side, 8.dp, side, bottom + if (wide) 24.dp else 104.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -411,6 +414,7 @@ fun TodayScreen(
     payments: List<Payment>, open: (Section) -> Unit, onPayments: () -> Unit,
     update: Release?, onUpdate: () -> Unit, onDismissUpdate: () -> Unit,
     myNames: List<String> = emptyList(),
+    onTests: () -> Unit = {},
     onAbsences: () -> Unit
 ) {
     val today = remember { LocalDate.now() }
@@ -480,8 +484,7 @@ fun TodayScreen(
         if (tests.isNotEmpty()) {
             item {
                 Box(Modifier.appear(2)) {
-                    if (tests.size > 3) Header("Verifiche e interrogazioni", "Tutte (${tests.size})") { open(Section.Agenda) }
-                    else Header("Verifiche e interrogazioni")
+                    Header("Verifiche e interrogazioni", if (tests.size > 3) "Tutte (${tests.size})" else "Tutte", onTests)
                 }
             }
             animItems(tests.take(3), "tests", 2) { TestItem(it, today, teachers, Mentions.matches("${it.notes} ${it.subject}", myNames)) }
@@ -489,7 +492,8 @@ fun TodayScreen(
         item { Box(Modifier.appear(5)) { Header("Ultimi voti", "Tutti") { open(Section.Voti) } } }
         if (grades.isEmpty()) item { Empty("Ancora nessun voto quest'anno", Icons.Rounded.Grade) }
         else item {
-            LazyRow(Modifier.fadeEdges().appear(6), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Da bordo a bordo: la prima scheda è allineata alle altre e scorrendo arrivano fino al bordo dello schermo
+            LazyRow(Modifier.fullBleed().appear(6), contentPadding = PaddingValues(horizontal = LocalSide.current), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(grades.take(10)) { i, g ->
                     Card(Modifier.width(124.dp).appear(6 + i)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -550,7 +554,11 @@ fun DayScreen(
 fun TestItem(e: Event, today: LocalDate, teachers: Teachers, mine: Boolean = false) {
     val days = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.parse(e.date))
     val c = MaterialTheme.colorScheme
-    val (bg, fg) = if (days <= 1) c.errorContainer to c.onErrorContainer else c.secondaryContainer to c.onSecondaryContainer
+    val (bg, fg) = when {
+        days < 0 -> c.surfaceContainerHighest to c.onSurfaceVariant
+        days <= 1 -> c.errorContainer to c.onErrorContainer
+        else -> c.secondaryContainer to c.onSecondaryContainer
+    }
     val subject = teachers.subject(e)
     Item(
         subject.ifBlank { e.author.ifBlank { e.testKind } },
@@ -560,7 +568,10 @@ fun TestItem(e: Event, today: LocalDate, teachers: Teachers, mine: Boolean = fal
         leading = { EventIcon(e) },
         trailing = {
             Text(
-                when (days) { 0L -> "Oggi"; 1L -> "Domani"; else -> "Tra $days giorni" },
+                when {
+                    days == 0L -> "Oggi"; days == 1L -> "Domani"; days == -1L -> "Ieri"
+                    days < 0 -> "${-days} giorni fa"; else -> "Tra $days giorni"
+                },
                 Modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold
             )
@@ -800,6 +811,30 @@ fun DayContent(
                 Spacer(Modifier.width(6.dp))
                 Text("Aggiungi promemoria")
             }
+        }
+    }
+}
+
+/** Tutte le verifiche e interrogazioni dell'anno: prima quelle in arrivo, poi quelle già fatte. */
+@Composable
+fun TestsScreen(agenda: List<Event>, lessons: List<Lesson>, myNames: List<String> = emptyList()) {
+    val today = remember { LocalDate.now() }
+    val teachers = remember(lessons) { Teachers(lessons) }
+    val all = remember(agenda) { agenda.filter { it.isTest } }
+    val kinds = listOf("Tutte") + all.map { it.testKind }.distinct().sorted()
+    var kind by rememberSaveable { mutableStateOf("Tutte") }
+    val shown = all.filter { kind == "Tutte" || it.testKind == kind }
+    val next = shown.filter { it.date >= today.toString() }.sortedBy { it.date + it.time }
+    val past = shown.filter { it.date < today.toString() }.sortedByDescending { it.date + it.time }
+    val mine = { e: Event -> Mentions.matches("${e.notes} ${e.subject}", myNames) }
+    Screen {
+        if (kinds.size > 2) item { ChipRow(kinds, kind, { it }, Modifier.appear(0)) { kind = it } }
+        item { Box(Modifier.appear(1)) { Header("In arrivo (${next.size})") } }
+        if (next.isEmpty()) item { Empty("Nessuna verifica in programma", Icons.Rounded.EventAvailable) }
+        animItems(next, "next", 2) { TestItem(it, today, teachers, mine(it)) }
+        if (past.isNotEmpty()) {
+            item { Box(Modifier.appear(3)) { Header("Già fatte (${past.size})") } }
+            animItems(past, "past", 4) { TestItem(it, today, teachers, mine(it)) }
         }
     }
 }

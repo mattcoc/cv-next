@@ -1,0 +1,6 @@
+Novità
+• Verifiche e interrogazioni: toccando "Tutte" si apre l'elenco completo dell'anno, con quelle in arrivo in cima e quelle già fatte sotto. Puoi filtrare tra verifiche e interrogazioni.
+
+Correzioni
+• Liquid Glass: la barra in basso ora è un vetro pieno con un leggero riflesso, e il testo delle schede non si vede più attraverso
+• Home: le schede di "Ultimi voti" sono allineate alle altre e scorrono fino al bordo dello schermo, senza sfumatura

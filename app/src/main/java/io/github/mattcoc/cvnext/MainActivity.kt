@@ -184,6 +184,7 @@ class MainActivity : ComponentActivity() {
                             NotificationInvite(settings) {}
                         }
                         "absences" -> Box(Modifier.statusBarsPadding()) { AbsencesScreen(DebugData.absences) }
+                        "tests" -> SubScreen("Verifiche e interrogazioni", {}) { TestsScreen(DebugData.agenda, DebugData.lessons) }
                         "agenda" -> Box(Modifier.statusBarsPadding()) { AgendaScreen(DebugData.agenda, "Tutto", DebugData.lessons) {} }
                         "subject" -> SubjectSheet("Matematica", DebugData.grades.filter { it.subject == "Matematica" }, DebugData.periods) {}
                         else -> App(api, settings, target, targetAccount)
@@ -431,6 +432,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
     val lessons = remember { Res { LocalDate.now().let { api.lessons(it.minusDays(30), it) } } }
     val grades = remember { Res { api.grades() } }
     val agenda = remember { Res { api.agenda() } }
+    val yearAgenda = remember { Res { schoolYear().let { (from, to) -> api.agenda(from, to) } } }
     val absences = remember { Res { api.absences() } }
     val notices = remember { Res { api.notices() } }
     val notes = remember { Res { api.notes() } }
@@ -504,7 +506,8 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                                 api.name, school.data, lessons.data!!, grades.data!!, agenda.data!!, absences.data!!, payments.data.orEmpty(),
                                 { section = it }, { stack.add(Page.Web("PagOnline", WebLinks.payments)) },
                                 update, { stack.add(Page.Preferences) }, { update = null },
-                                api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty()
+                                api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty(),
+                                { stack.add(Page.Tests) }
                             ) { stack.add(Page.Absences) }
                         }
                         Section.Giornata -> Refreshable(lessons, grades, agenda, absences) {
@@ -547,6 +550,14 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                     Page.Didactics -> SubScreen("File dei docenti", back) { Lazy(didactics) { DidacticsScreen(api, didactics.data!!) { stack.add(it) } } }
                     Page.Documents -> SubScreen("Scrutini", back) { Lazy(documents) { DocumentsScreen(api, documents.data!!) { stack.add(it) } } }
                     Page.Lessons -> SubScreen("Lezioni", back) { Refreshable(lessons) { LessonsScreen(lessons.data!!) } }
+                    Page.Tests -> SubScreen("Verifiche e interrogazioni", back) {
+                        Lazy(yearAgenda) {
+                            TestsScreen(
+                                yearAgenda.data!!, lessons.data.orEmpty(),
+                                api.accounts.firstOrNull { it.key == api.current }?.let { Mentions.names(context, it) }.orEmpty()
+                            )
+                        }
+                    }
                     Page.Preferences -> SettingsScreen(settings, api, back)
                 }
             }

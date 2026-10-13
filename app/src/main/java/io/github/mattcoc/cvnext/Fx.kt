@@ -142,7 +142,7 @@ fun FloatingNavBar(selected: Section, modifier: Modifier = Modifier, onSelect: (
         shadowElevation = barElevation(style),
         border = styleBorder()
     ) {
-        Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.glass(style).fillMaxWidth().height(72.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Section.entries.filter { it.inBar }.forEach { s -> NavItem(s, s == selected, Modifier.weight(1f).fillMaxHeight(), onSelect) }
         }
     }
@@ -178,6 +178,9 @@ private fun NavItem(s: Section, sel: Boolean, modifier: Modifier, onSelect: (Sec
     }
 }
 
+@Composable
+private fun Modifier.glass(style: AppStyle): Modifier = if (style == AppStyle.Glass) background(glassBar()) else this
+
 /** Barra laterale per tablet e schermi larghi, con gli stessi pulsanti della barra in basso. */
 @Composable
 fun SideRail(selected: Section, modifier: Modifier = Modifier, onSelect: (Section) -> Unit) {
@@ -191,7 +194,7 @@ fun SideRail(selected: Section, modifier: Modifier = Modifier, onSelect: (Sectio
         border = styleBorder()
     ) {
         // Telefono in orizzontale: lo spazio in altezza è poco, la barra scorre
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.glass(style).verticalScroll(rememberScrollState()).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Section.entries.filter { it.inBar }.forEach { s -> NavItem(s, s == selected, Modifier.fillMaxWidth().height(72.dp), onSelect) }
         }
     }

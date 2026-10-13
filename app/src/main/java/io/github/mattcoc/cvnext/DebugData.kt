@@ -32,7 +32,9 @@ object DebugData {
         Event(day(0), "12:00", "", "Ricci Claudio", "Svolgere il test di verifica caricato su Classroom", true, 1),
         Event(day(0), "08:00", "", "Garato Giulia", "Pag. 127 es. 3", true, 2),
         Event(day(2), "", "", "De Rito Mauro", "Verifica di sistemi  : circuiti di condizionamento e algoritmi", false, 3),
-        Event(day(3), "", "", "Ricci Claudio", "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", false, 4)
+        Event(day(3), "", "", "Ricci Claudio", "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", false, 4),
+        Event(day(-6), "", "", "Panzeri Maddalena", "Verifica di storia: la prima rivoluzione industriale", false, 5),
+        Event(day(-15), "", "", "Ricci Claudio", "Interrogazione di elettrotecnica: leggi di Kirchhoff", false, 6)
     )
     val reminders = listOf(Reminder("1", "debug", day(0), "Portare il libro di disegno"))
 

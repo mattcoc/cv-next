@@ -1,5 +1,6 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,24 @@ val LocalWide = staticCompositionLocalOf { false }
 
 /** Margine laterale che tiene il contenuto in una colonna leggibile sugli schermi larghi. */
 fun sideMargin(width: Dp, content: Dp = 760.dp): Dp = maxOf(16.dp, (width - content) / 2)
+
+/** Margine laterale della pagina corrente, per le righe che scorrono fino al bordo dello schermo. */
+val LocalSide = staticCompositionLocalOf { 16.dp }
+
+/** Allarga l'elemento oltre i margini della pagina, fino ai bordi dello schermo. */
+@Composable
+fun Modifier.fullBleed(): Modifier {
+    val side = LocalSide.current
+    return layout { measurable, constraints ->
+        val extra = side.roundToPx()
+        val wide = constraints.copy(
+            minWidth = constraints.minWidth + 2 * extra,
+            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + 2 * extra else constraints.maxWidth
+        )
+        val placeable = measurable.measure(wide)
+        layout(placeable.width - 2 * extra, placeable.height) { placeable.place(-extra, 0) }
+    }
+}
 
 /** Colori dello stile: parte da quelli di Material You e cambia sfondi, superfici e accento. */
 @Composable
@@ -171,10 +190,18 @@ fun panelColor(): Color = MaterialTheme.colorScheme.let { c ->
 fun barColor(): Color = MaterialTheme.colorScheme.let { c ->
     when (LocalStyle.current) {
         AppStyle.Material -> c.surfaceContainer
-        AppStyle.Glass -> if (LocalDark.current) Color(0xFF1C1C24).copy(alpha = 0.95f) else Color.White.copy(alpha = 0.96f)
+        AppStyle.Glass -> Color.Transparent
         else -> c.surfaceContainer
     }
 }
+
+/**
+ * Vetro della barra di navigazione in Liquid Glass: Android non sfoca quello che c'è dietro,
+ * quindi la barra è piena (il testo sotto non traspare) con un riflesso chiaro in alto, come il vetro di iOS.
+ */
+@Composable
+fun glassBar(): Brush = if (LocalDark.current) Brush.verticalGradient(listOf(Color(0xFF3A3D4C), Color(0xFF2A2C38)))
+else Brush.verticalGradient(listOf(Color.White, Color(0xFFEFF1F7)))
 
 fun barElevation(style: AppStyle): Dp = when (style) {
     AppStyle.Nothing -> 0.dp

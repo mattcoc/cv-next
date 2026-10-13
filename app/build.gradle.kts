@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.mattcoc.cvnext"
         minSdk = 26
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.6.3"
+        versionCode = 19
+        versionName = "1.6.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

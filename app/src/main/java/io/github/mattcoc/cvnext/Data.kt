@@ -42,10 +42,17 @@ suspend fun Api.grades() = get("/grades").list("grades").map {
     )
 }.sortedByDescending { it.date }
 
-suspend fun Api.agenda(): List<Event> {
+/** Anno scolastico in corso, da settembre ad agosto. */
+fun schoolYear(today: LocalDate = LocalDate.now()): Pair<LocalDate, LocalDate> {
+    val start = LocalDate.of(if (today.monthValue >= 9) today.year else today.year - 1, 9, 1)
+    return start to start.plusYears(1).minusDays(1)
+}
+
+suspend fun Api.agenda(
+    from: LocalDate = LocalDate.now().minusDays(30), to: LocalDate = LocalDate.now().plusDays(30)
+): List<Event> {
     val f = DateTimeFormatter.BASIC_ISO_DATE
-    val today = LocalDate.now()
-    return get("/agenda/all/${today.minusDays(30).format(f)}/${today.plusDays(30).format(f)}").list("agenda").map {
+    return get("/agenda/all/${from.format(f)}/${to.format(f)}").list("agenda").map {
         val begin = it.str("evtDatetimeBegin")
         Event(
             begin.take(10), if (it.optBoolean("isFullDay")) "" else begin.drop(11).take(5),

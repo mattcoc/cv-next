@@ -104,6 +104,7 @@ sealed interface Page {
     data object Didactics : Page
     data object Documents : Page
     data object Lessons : Page
+    data object Tests : Page
     data object Preferences : Page
 }
 

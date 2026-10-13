@@ -23,6 +23,8 @@ extension ShapeStyle where Self == Color {
 
 extension EnvironmentValues {
     @Entry var appTint: Color = Palette.color(0)
+    /// Dimensioni visibili della schermata che contiene la vista (zero finché non sono note).
+    @Entry var screenSize: CGSize = .zero
 }
 
 /// Sfondo con macchie di colore sfocate: dà al vetro qualcosa da rifrangere.
@@ -55,6 +57,7 @@ extension View {
 struct Screen<Content: View>: View {
     var refresh: (() async -> Void)? = nil
     @ViewBuilder var content: () -> Content
+    @State private var size: CGSize = .zero
 
     var body: some View {
         ScrollView {
@@ -65,7 +68,11 @@ struct Screen<Content: View>: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
+                .environment(\.screenSize, size)
         }
+        .onGeometryChange(for: CGSize.self) { g in
+            CGSize(width: g.size.width, height: g.size.height - g.safeAreaInsets.top - g.safeAreaInsets.bottom)
+        } action: { size = $0 }
         .scrollIndicators(.hidden)
         .background { AppBackground() }
         .refreshable { await refresh?() }
@@ -355,10 +362,12 @@ struct TestRow: View {
             footer: subject.trimmed.isEmpty ? nil : event.author,
             leading: AnyView(EventIcon(event: event)),
             trailing: AnyView(
-                Text(days == 0 ? "Oggi" : days == 1 ? "Domani" : "Tra \(days) giorni")
+                Text(days == 0 ? "Oggi" : days == 1 ? "Domani" : days == -1 ? "Ieri" : days < 0 ? "\(-days) giorni fa" : "Tra \(days) giorni")
                     .font(.caption.bold())
+                    // Le prove già fatte restano in grigio, senza colore.
+                    .foregroundStyle(days < 0 ? Color.secondary : Color.primary)
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .glassEffect(.regular.tint((days <= 1 ? Color.red : Color.secondary).opacity(0.3)), in: .capsule)
+                    .glassEffect(days < 0 ? Glass.regular : Glass.regular.tint((days <= 1 ? Color.red : Color.secondary).opacity(0.3)), in: .capsule)
             )
         )
     }
@@ -440,8 +449,39 @@ extension View {
             guard abs(v.translation.width) > abs(v.translation.height) * 1.5, abs(v.translation.width) > 60,
                   let i = days.firstIndex(of: selected.wrappedValue) else { return }
             let next = v.translation.width < 0 ? i + 1 : i - 1
-            if days.indices.contains(next) { withAnimation(.snappy) { selected.wrappedValue = days[next] } }
+            if days.indices.contains(next) { withAnimation(.smooth(duration: 0.35)) { selected.wrappedValue = days[next] } }
         })
+    }
+}
+
+/// Fila che scorre in orizzontale da un bordo all'altro dello schermo: a riposo la prima scheda è allineata
+/// al resto del contenuto, scorrendo le schede arrivano fino al bordo e lì sfumano.
+struct EdgeRow<Content: View>: View {
+    var spacing: CGFloat = 10
+    @ViewBuilder var content: () -> Content
+    @Environment(\.screenSize) private var screen
+    @State private var width: CGFloat = 0
+
+    var body: some View {
+        // Distanza tra il bordo della colonna e quello dello schermo (16 su iPhone, di più su iPad).
+        let side = max(screen.width > 0 && width > 0 ? (screen.width - width) / 2 : 16, 0)
+        let fade = min(side, 32)
+        ScrollView(.horizontal) {
+            HStack(spacing: spacing) { content() }
+                .padding(.vertical, 8)
+        }
+        .contentMargins(.horizontal, side, for: .scrollContent)
+        .scrollIndicators(.hidden)
+        .mask {
+            HStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing).frame(width: fade)
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: fade)
+            }
+        }
+        .padding(.horizontal, -side)
+        .padding(.vertical, -8)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }
 

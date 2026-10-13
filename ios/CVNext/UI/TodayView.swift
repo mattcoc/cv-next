@@ -5,13 +5,13 @@ struct TodayView: View {
     @Environment(\.appTint) private var tint
 
     private let today = Day.today
-    @State private var showAgenda = false
+    @State private var showTests = false
 
     var body: some View {
         Screen(refresh: { await model.loadAll() }) {
             Loaded(model.lessons, model.grades, model.agenda, model.absences) { content }
         }
-        .navigationDestination(isPresented: $showAgenda) { AgendaView(filter: "Tutto").navigationTitle("Agenda") }
+        .navigationDestination(isPresented: $showTests) { TestsView() }
     }
 
     @ViewBuilder private var content: some View {
@@ -73,11 +73,7 @@ struct TodayView: View {
         }
 
         if !tests.isEmpty {
-            if tests.count > 3 {
-                Header(text: "Verifiche e interrogazioni", action: "Tutte (\(tests.count))") { showAgenda = true }
-            } else {
-                Header(text: "Verifiche e interrogazioni")
-            }
+            Header(text: "Verifiche e interrogazioni", action: tests.count > 3 ? "Tutte (\(tests.count))" : "Tutte") { showTests = true }
             ForEach(Array(tests.prefix(3).enumerated()), id: \.offset) { _, e in
                 TestRow(event: e, teachers: teachers, mine: Mentions.matches("\(e.notes) \(e.subject)", model.myNames))
             }
@@ -90,27 +86,22 @@ struct TodayView: View {
         if grades.isEmpty {
             EmptyCard(text: "Ancora nessun voto quest'anno", icon: "star")
         } else {
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(Array(grades.prefix(10).enumerated()), id: \.offset) { _, g in
-                        Button { model.tab = .grades } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                GradeCircle(grade: g)
-                                Text(g.subject).font(.subheadline.weight(.medium)).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
-                                Text(shortDate(g.date)).font(.caption).foregroundStyle(.subtle)
-                            }
-                            .foregroundStyle(.primary)
-                            .frame(width: 104, alignment: .leading)
-                            .glassCard(interactive: true)
+            EdgeRow {
+                ForEach(Array(grades.prefix(10).enumerated()), id: \.offset) { _, g in
+                    Button { model.tab = .grades } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            GradeCircle(grade: g)
+                            Text(g.subject).font(.subheadline.weight(.medium)).lineLimit(2, reservesSpace: true).multilineTextAlignment(.leading)
+                            Text(shortDate(g.date)).font(.caption).foregroundStyle(.subtle)
                         }
-                        .buttonStyle(.plain)
-                        .frame(width: 132)
+                        .foregroundStyle(.primary)
+                        .frame(width: 104, alignment: .leading)
+                        .glassCard(interactive: true)
                     }
+                    .buttonStyle(.plain)
+                    .frame(width: 132)
                 }
-                .padding(.horizontal, 16)
             }
-            .scrollIndicators(.hidden)
-            .padding(.horizontal, -16)
         }
 
         NavigationLink(value: Page.agenda("Tutto")) {
@@ -132,6 +123,8 @@ struct DayView: View {
     @State private var selected: Date = (-14...14).map { Day.add(Day.today, $0) }.first { !Day.isSunday($0) && $0 >= Day.today } ?? Day.today
     @State private var addingFor: Date?
     @State private var reminderText = ""
+    @State private var forward = true
+    @State private var stripHeight: CGFloat = 90
 
     var body: some View {
         Screen(refresh: { await model.loadAll() }) {
@@ -155,18 +148,47 @@ struct DayView: View {
         let agenda = model.agenda.data ?? []
         let absences = model.absences.data ?? []
         let teachers = Teachers(lessons)
-        DayStrip(days: days, selected: $selected) { d in
+        // Cambiando giorno si ricorda la direzione, così il nuovo giorno entra dal lato giusto.
+        let pick = Binding(get: { selected }, set: { d in
+            forward = d >= selected
+            selected = d
+        })
+        DayStrip(days: days, selected: pick) { d in
             let iso = Day.iso(d)
             return lessons.contains { $0.date == iso } || agenda.contains { $0.date == iso } || grades.contains { $0.date.hasPrefix(iso) }
                 || absences.contains { $0.date.hasPrefix(iso) } || model.myReminders.contains { $0.date == iso }
         }
-        DayContent(day: selected, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
-                   reminders: model.myReminders.filter { $0.date == Day.iso(selected) },
-                   onAdd: { addingFor = selected }, onRemove: { model.reminders.remove($0) })
-            .id(selected)
-            .transition(.opacity)
-            .daySwipe(days, $selected)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
+        // I due giorni si sovrappongono durante la dissolvenza invece di spingersi in colonna.
+        ZStack(alignment: .top) {
+            DayContent(day: selected, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
+                       reminders: model.myReminders.filter { $0.date == Day.iso(selected) },
+                       onAdd: { addingFor = selected }, onRemove: { model.reminders.remove($0) })
+                .id(selected)
+                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(x: forward ? 28 : -28)), removal: .opacity))
+        }
+        // Lo scorrimento vale su tutta la pagina sotto la striscia, anche nello spazio vuoto in fondo e ai lati.
+        .modifier(PageSwipe(days: days, selected: pick, used: stripHeight + 50))
+    }
+}
 
+/// Allunga la vista fino in fondo alla parte visibile della schermata (tolti [used] punti già occupati)
+/// e fino ai bordi laterali, e su tutta quest'area lo scorrimento orizzontale cambia giorno.
+private struct PageSwipe: ViewModifier {
+    let days: [Date]
+    let selected: Binding<Date>
+    let used: CGFloat
+    @Environment(\.screenSize) private var screen
+
+    func body(content: Content) -> some View {
+        // Distanza tra la colonna del contenuto e il bordo dello schermo (su iPad la colonna è al centro).
+        let side = screen.width > 0 ? max((screen.width - min(screen.width, 760)) / 2, 0) + 16 : 16
+        content
+            .frame(maxWidth: .infinity, minHeight: max(screen.height - used, 0), alignment: .top)
+            .padding(.horizontal, side)
+            .contentShape(.rect)
+            .daySwipe(days, selected)
+            .padding(.horizontal, -side)
     }
 }
 

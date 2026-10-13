@@ -92,6 +92,15 @@ enum Day {
     static func between(_ a: Date, _ b: Date) -> Int { cal.dateComponents([.day], from: cal.startOfDay(for: a), to: cal.startOfDay(for: b)).day ?? 0 }
     static func dayName(_ d: Date) -> String { dayFmt.string(from: d) }
 
+    /// Anno scolastico in corso: dal 1° settembre al 31 agosto.
+    static func schoolYear(_ today: Date = Day.today) -> (start: Date, end: Date) {
+        let c = cal.dateComponents([.year, .month], from: today)
+        let year = (c.month ?? 1) >= 9 ? (c.year ?? 2000) : (c.year ?? 2000) - 1
+        let start = cal.date(from: DateComponents(year: year, month: 9, day: 1)) ?? today
+        let end = cal.date(from: DateComponents(year: year + 1, month: 8, day: 31)) ?? today
+        return (start, end)
+    }
+
     /// Il giorno di scuola dopo [from]: la domenica si salta.
     static func nextSchoolDay(_ from: Date = today) -> Date {
         let d = add(from, 1)

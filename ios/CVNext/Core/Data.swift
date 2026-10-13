@@ -67,9 +67,23 @@ extension Api {
         }.sorted { $0.date > $1.date }
     }
 
+    /// Agenda dei 30 giorni prima e dopo oggi.
     func agenda() async throws -> [Event] {
         let today = Day.today
-        return try await get("/agenda/all/\(Day.basic(Day.add(today, -30)))/\(Day.basic(Day.add(today, 30)))").list("agenda").map {
+        return try await agenda(from: Day.add(today, -30), to: Day.add(today, 30))
+    }
+
+    /// Tutta l'agenda dell'anno scolastico in corso, per l'elenco completo delle verifiche.
+    func yearAgenda() async throws -> [Event] {
+        let year = Day.schoolYear()
+        return try await agenda(from: year.start, to: year.end, cacheAs: "/agenda/year")
+    }
+
+    func agenda(from: Date, to: Date, cacheAs: String? = nil) async throws -> [Event] {
+        let path = "/agenda/all/\(Day.basic(from))/\(Day.basic(to))"
+        let o: JSON
+        if let cacheAs { o = try await get(path, cacheAs: cacheAs) } else { o = try await get(path) }
+        return o.list("agenda").map {
             let begin = $0.str("evtDatetimeBegin")
             let time = $0.bool("isFullDay") ? "" : String(begin.dropFirst(11).prefix(5))
             return Event(

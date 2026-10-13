@@ -26,6 +26,8 @@ struct SettingsView: View {
 
     private func setAlerts(_ set: Set<AlertKind>) {
         alertsRaw = set.map(\.rawValue).sorted().joined(separator: ",")
+        // Spente apposta: l'invito ad attivarle non viene più proposto.
+        if set.isEmpty { UserDefaults.standard.set(true, forKey: "alertsOff") } else { UserDefaults.standard.removeObject(forKey: "alertsOff") }
         if !set.isEmpty { Task { _ = await Background.requestPermission(); Background.schedule() } }
     }
 

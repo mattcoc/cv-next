@@ -155,8 +155,8 @@ final class Api {
         return Api.cacheRoot.appendingPathComponent(safe(key), isDirectory: true).appendingPathComponent("\(name).json")
     }
 
-    private func json(_ method: String, _ path: String) async throws -> JSON {
-        let file = cacheFile(method, path)
+    private func json(_ method: String, _ path: String, cacheAs: String? = nil) async throws -> JSON {
+        let file = cacheFile(method, cacheAs ?? path)
         if Api.cacheOnly {
             guard let file, let d = try? Data(contentsOf: file), let o = (try? JSONSerialization.jsonObject(with: d)) as? JSON else {
                 throw ApiError("Nessun dato salvato")
@@ -173,6 +173,8 @@ final class Api {
     }
 
     func get(_ path: String) async throws -> JSON { try await json("GET", path) }
+    /// Come `get`, ma la copia salvata ha un nome a parte: serve quando lo stesso percorso cambia solo nelle date.
+    func get(_ path: String, cacheAs: String) async throws -> JSON { try await json("GET", path, cacheAs: cacheAs) }
     func post(_ path: String) async throws -> JSON { try await json("POST", path) }
     func bytes(_ path: String) async throws -> Data { try await authed { try await self.raw("GET", self.student(path), nil, self.token()) } }
     func postBytes(_ path: String) async throws -> Data { try await authed { try await self.raw("POST", self.student(path), nil, self.token()) } }

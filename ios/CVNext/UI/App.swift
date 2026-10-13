@@ -63,6 +63,7 @@ struct DebugRoot: View {
         case "agenda": NavigationStack { AgendaView(filter: "Tutto").navigationTitle("Agenda") }.environment(model)
         case "subject":
             NavigationStack { SubjectView(subject: "Matematica") }.environment(model)
+        case "tests": NavigationStack { TestsView() }.environment(model)
         default:
             HomeView(model: model, onSwitch: { _ in }, onAdd: {}, onLogout: {})
                 .onAppear {
@@ -71,6 +72,7 @@ struct DebugRoot: View {
                     case "grades": model.tab = .grades
                     case "notices": model.tab = .notices
                     case "functions": model.tab = .functions
+                    case "invite": model.tab = .today; model.showInvite = true
                     default: model.tab = .today
                     }
                 }
@@ -91,6 +93,7 @@ struct HomeView: View {
     let onSwitch: (String) -> Void
     let onAdd: () -> Void
     let onLogout: () -> Void
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
         @Bindable var model = model
@@ -119,13 +122,27 @@ struct HomeView: View {
         .sheet(isPresented: $model.showAccount) {
             AccountSheet(onSwitch: onSwitch, onAdd: onAdd, onLogout: onLogout).environment(model)
         }
+        // Invito ad attivare le notifiche, se manca il permesso o l'aggiornamento in background.
+        .sheet(isPresented: $model.showInvite) { InviteSheet() }
         .task {
             await model.loadAll()
             guard model.debugName == nil else { return }
+            await checkInvite()
             model.update = await Updater.dailyCheck()
             Background.schedule()
             await Evening.reschedule()
         }
+        .onChange(of: phase) { _, p in
+            if p == .active { Task { await checkInvite() } }
+        }
+    }
+}
+
+extension HomeView {
+    /// Propone l'invito solo se non c'è già un'altra finestra aperta.
+    func checkInvite() async {
+        guard model.debugName == nil, !model.showInvite, !model.showAccount, await Invite.due() else { return }
+        model.showInvite = true
     }
 }
 

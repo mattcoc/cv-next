@@ -51,12 +51,15 @@ final class Model {
     let api: Api
     var tab: AppTab = .today
     var showAccount = false
+    var showInvite = false
     var update: IosRelease?
     @ObservationIgnored var debugName: String?
 
     let lessons: Res<[Lesson]>
     let grades: Res<[Grade]>
     let agenda: Res<[Event]>
+    /// Agenda dell'intero anno scolastico: si carica solo aprendo l'elenco delle verifiche.
+    let yearAgenda: Res<[Event]>
     let absences: Res<[Absence]>
     let notices: Res<[Notice]>
     let notes: Res<[NoteItem]>
@@ -73,6 +76,7 @@ final class Model {
         lessons = Res { try await api.lessons(from: Day.add(today, -30), to: today) }
         grades = Res { try await api.grades() }
         agenda = Res { try await api.agenda() }
+        yearAgenda = Res { try await api.yearAgenda() }
         absences = Res { try await api.absences() }
         notices = Res { try await api.notices() }
         notes = Res { try await api.notes() }
@@ -90,6 +94,7 @@ final class Model {
         lessons = Res(value: DebugData.lessons)
         grades = Res(value: DebugData.grades)
         agenda = Res(value: DebugData.agenda)
+        yearAgenda = Res(value: DebugData.yearAgenda)
         absences = Res(value: DebugData.absences)
         notices = Res(value: DebugData.notices)
         notes = Res(value: [])

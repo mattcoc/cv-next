@@ -37,6 +37,15 @@ enum DebugData {
          Event(date: day(3), time: "", subject: "", author: "Ricci Claudio", notes: "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", homework: false, id: 4)]
     }
 
+    /// L'anno intero: le verifiche dell'agenda più due già fatte e una più lontana.
+    static var yearAgenda: [Event] {
+        agenda + [
+            Event(date: day(-6), time: "", subject: "", author: "Panzeri Maddalena", notes: "Verifica scritta: analisi del testo poetico", homework: false, id: 5),
+            Event(date: day(-15), time: "", subject: "", author: "Garato Giulia", notes: "Interrogazione di inglese: Rossi, Neri, Conti", homework: false, id: 6),
+            Event(date: day(12), time: "", subject: "", author: "Ricci Claudio", notes: "Verifica di elettrotecnica su campo magnetico e induzione", homework: false, id: 7)
+        ]
+    }
+
     static var reminders: [Reminder] { [Reminder(id: "1", account: "debug", date: day(0), text: "Portare il libro di disegno")] }
 
     static var absences: [Absence] {

@@ -123,23 +123,20 @@ struct DayView: View {
     @State private var selected: Date = (-14...14).map { Day.add(Day.today, $0) }.first { !Day.isSunday($0) && $0 >= Day.today } ?? Day.today
     @State private var addingFor: Date?
     @State private var reminderText = ""
-    @State private var forward = true
-    @State private var stripHeight: CGFloat = 90
 
     var body: some View {
-        Screen(refresh: { await model.loadAll() }) {
-            Loaded(model.lessons, model.grades, model.agenda, model.absences) { content }
-        }
-        .alert("Promemoria", isPresented: Binding(get: { addingFor != nil }, set: { if !$0 { addingFor = nil } })) {
-            TextField("Es. portare il libro di disegno", text: $reminderText)
-            Button("Salva") {
-                if let day = addingFor { model.reminders.add(model.debugName != nil ? "debug" : (model.api.current ?? ""), Day.iso(day), reminderText) }
-                reminderText = ""
+        Loaded(model.lessons, model.grades, model.agenda, model.absences) { content }
+            .background { AppBackground() }
+            .alert("Promemoria", isPresented: Binding(get: { addingFor != nil }, set: { if !$0 { addingFor = nil } })) {
+                TextField("Es. portare il libro di disegno", text: $reminderText)
+                Button("Salva") {
+                    if let day = addingFor { model.reminders.add(model.debugName != nil ? "debug" : (model.api.current ?? ""), Day.iso(day), reminderText) }
+                    reminderText = ""
+                }
+                Button("Annulla", role: .cancel) { reminderText = "" }
+            } message: {
+                Text("\(addingFor.map { longDate(Day.iso($0)) } ?? "")\nResta solo su questo telefono.")
             }
-            Button("Annulla", role: .cancel) { reminderText = "" }
-        } message: {
-            Text("\(addingFor.map { longDate(Day.iso($0)) } ?? "")\nResta solo su questo telefono.")
-        }
     }
 
     @ViewBuilder private var content: some View {
@@ -148,47 +145,48 @@ struct DayView: View {
         let agenda = model.agenda.data ?? []
         let absences = model.absences.data ?? []
         let teachers = Teachers(lessons)
-        // Cambiando giorno si ricorda la direzione, così il nuovo giorno entra dal lato giusto.
-        let pick = Binding(get: { selected }, set: { d in
-            forward = d >= selected
-            selected = d
-        })
-        DayStrip(days: days, selected: pick) { d in
-            let iso = Day.iso(d)
-            return lessons.contains { $0.date == iso } || agenda.contains { $0.date == iso } || grades.contains { $0.date.hasPrefix(iso) }
-                || absences.contains { $0.date.hasPrefix(iso) } || model.myReminders.contains { $0.date == iso }
+        let page = Binding<Date?>(get: { selected }, set: { if let d = $0 { selected = d } })
+        VStack(spacing: 0) {
+            DayStrip(days: days, selected: Binding(get: { selected }, set: { d in withAnimation(.smooth(duration: 0.35)) { selected = d } })) { d in
+                let iso = Day.iso(d)
+                return lessons.contains { $0.date == iso } || agenda.contains { $0.date == iso } || grades.contains { $0.date.hasPrefix(iso) }
+                    || absences.contains { $0.date.hasPrefix(iso) } || model.myReminders.contains { $0.date == iso }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
+            // Ogni giorno è una pagina con la sua lista: lo scorrimento orizzontale funziona ovunque,
+            // anche nello spazio vuoto, e i giorni si dissolvono uno nell'altro.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(days, id: \.self) { day in
+                        ScrollView {
+                            DayContent(day: day, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
+                                       reminders: model.myReminders.filter { $0.date == Day.iso(day) },
+                                       onAdd: { addingFor = day }, onRemove: { model.reminders.remove($0) })
+                                .padding(.horizontal, 16)
+                                .padding(.top, 8)
+                                .padding(.bottom, 32)
+                                .frame(maxWidth: 760)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .scrollIndicators(.hidden)
+                        .refreshable { await model.loadAll() }
+                        .containerRelativeFrame(.horizontal)
+                        .scrollTransition(.interactive, axis: .horizontal) { view, phase in
+                            view
+                                .opacity(1 - abs(phase.value))
+                                .scaleEffect(1 - 0.05 * abs(phase.value))
+                        }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollIndicators(.hidden)
+            .scrollPosition(id: page)
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
-        // I due giorni si sovrappongono durante la dissolvenza invece di spingersi in colonna.
-        ZStack(alignment: .top) {
-            DayContent(day: selected, lessons: lessons, agenda: agenda, grades: grades, absences: absences, teachers: teachers,
-                       reminders: model.myReminders.filter { $0.date == Day.iso(selected) },
-                       onAdd: { addingFor = selected }, onRemove: { model.reminders.remove($0) })
-                .id(selected)
-                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(x: forward ? 28 : -28)), removal: .opacity))
-        }
-        // Lo scorrimento vale su tutta la pagina sotto la striscia, anche nello spazio vuoto in fondo e ai lati.
-        .modifier(PageSwipe(days: days, selected: pick, used: stripHeight + 50))
-    }
-}
-
-/// Allunga la vista fino in fondo alla parte visibile della schermata (tolti [used] punti già occupati)
-/// e fino ai bordi laterali, e su tutta quest'area lo scorrimento orizzontale cambia giorno.
-private struct PageSwipe: ViewModifier {
-    let days: [Date]
-    let selected: Binding<Date>
-    let used: CGFloat
-    @Environment(\.screenSize) private var screen
-
-    func body(content: Content) -> some View {
-        // Distanza tra la colonna del contenuto e il bordo dello schermo (su iPad la colonna è al centro).
-        let side = screen.width > 0 ? max((screen.width - min(screen.width, 760)) / 2, 0) + 16 : 16
-        content
-            .frame(maxWidth: .infinity, minHeight: max(screen.height - used, 0), alignment: .top)
-            .padding(.horizontal, side)
-            .contentShape(.rect)
-            .daySwipe(days, selected)
-            .padding(.horizontal, -side)
     }
 }
 

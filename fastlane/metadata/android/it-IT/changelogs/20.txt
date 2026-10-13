@@ -1,0 +1,6 @@
+Correzioni
+• Giornata: per cambiare giorno puoi fare swipe su tutta la pagina, non solo sulle schede
+• Giornata e Agenda: passando da un giorno all'altro le schede si dissolvono, senza essere tagliate ai lati
+• Le liste che scorrono sotto la barra in alto ora svaniscono con una sfumatura invece di essere tagliate di netto
+• Home: tornata la sfumatura ai lati di "Ultimi voti", che a riposo lascia le schede nitide
+• La striscia dei giorni arriva fino al bordo dello schermo

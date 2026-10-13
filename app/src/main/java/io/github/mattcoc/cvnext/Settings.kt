@@ -1,5 +1,6 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -234,8 +235,9 @@ fun SettingsScreen(settings: Settings, api: Api? = null, onBack: () -> Unit) {
     SubScreen("Impostazioni", onBack) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
         val side = sideMargin(maxWidth, 680.dp)
+        val list = rememberLazyListState()
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().fadeTop(list), state = list,
             contentPadding = PaddingValues(side, 4.dp, side, 32.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

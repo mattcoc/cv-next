@@ -1,5 +1,7 @@
 package io.github.mattcoc.cvnext
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
@@ -88,6 +90,35 @@ fun Modifier.fadeEdges() = graphicsLayer(compositingStrategy = CompositingStrate
         Brush.horizontalGradient(0f to Color.Transparent, 0.06f to Color.Black, 0.94f to Color.Black, 1f to Color.Transparent),
         blendMode = BlendMode.DstIn
     )
+}
+
+/** Sfumatura ai lati larga [width]: con width uguale al margine della pagina, a riposo le schede restano nitide. */
+fun Modifier.fadeEdges(width: Dp) = graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen).drawWithContent {
+    drawContent()
+    val f = (width.toPx() / size.width).coerceIn(0f, 0.5f)
+    drawRect(
+        Brush.horizontalGradient(0f to Color.Transparent, f to Color.Black, 1f - f to Color.Black, 1f to Color.Transparent),
+        blendMode = BlendMode.DstIn
+    )
+}
+
+/**
+ * Quello che scorre sotto la barra in alto svanisce invece di essere tagliato di netto.
+ * La sfumatura compare solo quando la lista è scorsa, così il primo elemento resta pieno.
+ */
+@Composable
+fun Modifier.fadeTop(state: ScrollableState, height: Dp = 28.dp): Modifier {
+    val shown by animateFloatAsState(if (state.canScrollBackward) 1f else 0f, tween(180), label = "fadeTop")
+    return graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen).drawWithContent {
+        drawContent()
+        if (shown > 0f) {
+            val h = height.toPx()
+            drawRect(
+                Brush.verticalGradient(0f to Color.Black.copy(alpha = 1f - shown), 1f to Color.Black, endY = h),
+                size = Size(size.width, h), blendMode = BlendMode.DstIn
+            )
+        }
+    }
 }
 
 @Composable

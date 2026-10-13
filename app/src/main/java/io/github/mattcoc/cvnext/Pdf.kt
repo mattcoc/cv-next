@@ -173,7 +173,7 @@ fun PdfViewer(
         val px = with(LocalDensity.current) { (maxWidth - 32.dp).toPx() }
         val renderWidth = (px * 1.25f).toInt().coerceAtMost(1400)
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().fadeTop(list),
             state = list,
             contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, bottom + 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

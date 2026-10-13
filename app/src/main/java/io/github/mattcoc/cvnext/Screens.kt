@@ -1,5 +1,8 @@
 package io.github.mattcoc.cvnext
 
+import kotlin.math.absoluteValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
@@ -138,9 +141,10 @@ fun Screen(content: LazyListScope.() -> Unit) {
     val wide = LocalWide.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val side = sideMargin(maxWidth)
+        val state = rememberLazyListState()
         CompositionLocalProvider(LocalSide provides side) {
             LazyColumn(
-                Modifier.fillMaxSize(),
+                Modifier.fillMaxSize().fadeTop(state), state = state,
                 contentPadding = PaddingValues(side, 8.dp, side, bottom + if (wide) 24.dp else 104.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 content = content
@@ -326,8 +330,8 @@ fun DayStrip(days: List<LocalDate>, selected: LocalDate, marked: (LocalDate) -> 
         state.animateScrollToItem(i, -((info.viewportSize.width - item) / 2 - info.beforeContentPadding))
     }
     LazyRow(
-        Modifier.fillMaxWidth().fadeEdges(), state = state,
-        contentPadding = PaddingValues(horizontal = 28.dp, vertical = 6.dp),
+        Modifier.fullBleed().fadeEdges(LocalSide.current + 12.dp), state = state,
+        contentPadding = PaddingValues(horizontal = LocalSide.current + 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(days) { d ->
@@ -360,7 +364,20 @@ fun DayPager(days: List<LocalDate>, selected: LocalDate, onSelect: (LocalDate) -
         if (i >= 0 && i != pager.currentPage) pager.animateScrollToPage(i)
     }
     LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { onSelect(days[it]) } }
-    HorizontalPager(pager, Modifier.fillMaxWidth(), pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { content(days[it]) }
+    // Da bordo a bordo, così le schede non vengono tagliate ai margini mentre scorrono
+    HorizontalPager(
+        pager, Modifier.fullBleed(), contentPadding = PaddingValues(horizontal = LocalSide.current),
+        pageSpacing = LocalSide.current, verticalAlignment = Alignment.Top
+    ) { i -> Box(Modifier.dayFade(pager, i)) { content(days[i]) } }
+}
+
+/** Passando da un giorno all'altro la pagina che esce svanisce e quella che entra compare, con un leggero rimpicciolimento. */
+fun Modifier.dayFade(pager: PagerState, page: Int) = graphicsLayer {
+    val off = ((pager.currentPage - page) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+    alpha = 1f - off
+    val s = 1f - 0.05f * off
+    scaleX = s
+    scaleY = s
 }
 
 @Composable
@@ -493,7 +510,7 @@ fun TodayScreen(
         if (grades.isEmpty()) item { Empty("Ancora nessun voto quest'anno", Icons.Rounded.Grade) }
         else item {
             // Da bordo a bordo: la prima scheda è allineata alle altre e scorrendo arrivano fino al bordo dello schermo
-            LazyRow(Modifier.fullBleed().appear(6), contentPadding = PaddingValues(horizontal = LocalSide.current), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyRow(Modifier.fullBleed().fadeEdges(LocalSide.current).appear(6), contentPadding = PaddingValues(horizontal = LocalSide.current), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(grades.take(10)) { i, g ->
                     Card(Modifier.width(124.dp).appear(6 + i)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -534,15 +551,36 @@ fun DayScreen(
         mutableStateOf(days.firstOrNull { it >= today }?.toString() ?: today.toString())
     }
     val teachers = remember(lessons) { Teachers(lessons) }
-    Screen {
-        item { Box(Modifier.appear(0)) { DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() } } }
-        item {
-            Box(Modifier.appear(1)) {
-                DayPager(days, LocalDate.parse(selected), { selected = it.toString() }) { day ->
-                    DayContent(
-                        day, today, lessons, agenda, grades, absences, teachers,
-                        reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
-                    )
+    val pager = rememberPagerState(days.indexOf(LocalDate.parse(selected)).coerceAtLeast(0)) { days.size }
+    LaunchedEffect(selected) {
+        val i = days.indexOf(LocalDate.parse(selected))
+        if (i >= 0 && i != pager.currentPage) pager.animateScrollToPage(i)
+    }
+    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { selected = days[it].toString() } }
+    val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val wide = LocalWide.current
+    // Lo swipe funziona su tutta la pagina: ogni giorno è una pagina con la sua lista che scorre in verticale
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val side = sideMargin(maxWidth)
+        CompositionLocalProvider(LocalSide provides side) {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.padding(start = side, end = side, top = 8.dp).appear(0)) {
+                    DayStrip(days, LocalDate.parse(selected), { it.toString() in busy }) { selected = it.toString() }
+                }
+                HorizontalPager(pager, Modifier.fillMaxSize().appear(1), beyondViewportPageCount = 1) { i ->
+                    val day = days[i]
+                    val list = rememberLazyListState()
+                    LazyColumn(
+                        Modifier.fillMaxSize().fadeTop(list).dayFade(pager, i), state = list,
+                        contentPadding = PaddingValues(side, 10.dp, side, bottom + if (wide) 24.dp else 104.dp)
+                    ) {
+                        item {
+                            DayContent(
+                                day, today, lessons, agenda, grades, absences, teachers,
+                                reminders.filter { it.date == day.toString() }, { adding = day }, onRemoveReminder
+                            )
+                        }
+                    }
                 }
             }
         }

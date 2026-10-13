@@ -161,6 +161,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme(settings) {
                 Backdrop(Modifier.fillMaxSize()) {
+                    // Negli screenshot si vedono anche le spunte dei compiti.
+                    CompositionLocalProvider(LocalDone provides remember { DoneStore(applicationContext, "debug") }) {
                     when (debugScreen) {
                         "settings" -> SettingsScreen(settings) { finish() }
                         "grades" -> Box(Modifier.statusBarsPadding()) { GradesScreen(DebugData.grades, DebugData.periods) }
@@ -210,6 +212,7 @@ class MainActivity : ComponentActivity() {
                             App(api, settings, target, targetAccount)
                             if (locked.value) LockScreen { AppLock.unlock(this@MainActivity) { locked.value = false } }
                         }
+                    }
                     }
                 }
             }

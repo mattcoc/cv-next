@@ -828,7 +828,7 @@ fun TestsScreen(agenda: List<Event>, lessons: List<Lesson>, myNames: List<String
     val past = shown.filter { it.date < today.toString() }.sortedByDescending { it.date + it.time }
     val mine = { e: Event -> Mentions.matches("${e.notes} ${e.subject}", myNames) }
     Screen {
-        if (kinds.size > 2) item { ChipRow(kinds, kind, { it }, Modifier.appear(0)) { kind = it } }
+        if (kinds.size > 2) item { ChipRow(kinds, kind, { when (it) { "Verifica" -> "Verifiche"; "Interrogazione" -> "Interrogazioni"; else -> it } }, Modifier.appear(0)) { kind = it } }
         item { Box(Modifier.appear(1)) { Header("In arrivo (${next.size})") } }
         if (next.isEmpty()) item { Empty("Nessuna verifica in programma", Icons.Rounded.EventAvailable) }
         animItems(next, "next", 2) { TestItem(it, today, teachers, mine(it)) }

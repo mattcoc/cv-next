@@ -464,7 +464,7 @@ fun PaymentsScreen(charges: List<Charge>, onPay: () -> Unit) {
 private fun ChargeItem(charge: Charge, colors: Pair<Color, Color>, state: String) {
     val c = MaterialTheme.colorScheme
     Item(
-        charge.title, if (charge.due.isNotBlank()) "Entro il ${longDate(charge.due)}" else null,
+        charge.title, if (charge.due.isNotBlank()) "Scadenza: " + longDate(charge.due).replaceFirstChar { it.lowercase() } else null,
         if (charge.settled) "Pagato € ${charge.paid}" else null,
         leading = { IconCircle(Icons.Rounded.CreditCard, colors.first, colors.second) },
         trailing = {

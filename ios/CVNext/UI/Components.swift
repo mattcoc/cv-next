@@ -423,6 +423,8 @@ struct DayStrip: View {
                 }
             }
             .scrollIndicators(.hidden)
+            // La striscia sta ferma in alto: niente velo di sfocatura dietro
+            .scrollEdgeEffectHidden(true, for: .all)
             .padding(.horizontal, -16)
             .onAppear { proxy.scrollTo(selected, anchor: .center) }
             .onChange(of: selected) { _, s in withAnimation { proxy.scrollTo(s, anchor: .center) } }

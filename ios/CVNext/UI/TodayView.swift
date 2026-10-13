@@ -185,6 +185,7 @@ struct DayView: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollIndicators(.hidden)
+            .scrollEdgeEffectHidden(true, for: .horizontal)
             .scrollPosition(id: page)
         }
     }

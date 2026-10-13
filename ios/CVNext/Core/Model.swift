@@ -90,7 +90,7 @@ final class Model {
     /// Dati di esempio, per gli screenshot automatici.
     init(debug: Void) {
         api = Api(fixed: "debug")
-        debugName = "Matteo Rossi"
+        debugName = "Marco Rossi"
         lessons = Res(value: DebugData.lessons)
         grades = Res(value: DebugData.grades)
         agenda = Res(value: DebugData.agenda)

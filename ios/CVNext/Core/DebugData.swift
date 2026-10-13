@@ -23,26 +23,26 @@ enum DebugData {
     }
 
     static var lessons: [Lesson] {
-        [Lesson(date: day(0), hour: 1, hours: 1, subject: "Lingua e Letteratura Italiana", topic: "Tipologia C. Esempio di costruzione del tema", author: "Panzeri Maddalena", cls: "4AET"),
-         Lesson(date: day(0), hour: 2, hours: 2, subject: "Elettrotecnica ed Elettronica", topic: "Induttore, induttanza e legge di Hopkinson", author: "Ricci Claudio"),
-         Lesson(date: day(0), hour: 4, hours: 1, subject: "Lingua Inglese", topic: "Present perfect: esercizi", author: "Garato Giulia"),
-         Lesson(date: day(-1), hour: 1, hours: 2, subject: "Sistemi Automatici", topic: "Diagrammi di flusso", author: "De Rito Mauro")]
+        [Lesson(date: day(0), hour: 1, hours: 1, subject: "Lingua e Letteratura Italiana", topic: "Tipologia C. Esempio di costruzione del tema", author: "Moretti Laura", cls: "4A"),
+         Lesson(date: day(0), hour: 2, hours: 2, subject: "Elettrotecnica ed Elettronica", topic: "Induttore, induttanza e legge di Hopkinson", author: "Conti Marco"),
+         Lesson(date: day(0), hour: 4, hours: 1, subject: "Lingua Inglese", topic: "Present perfect: esercizi", author: "Ferri Anna"),
+         Lesson(date: day(-1), hour: 1, hours: 2, subject: "Sistemi Automatici", topic: "Diagrammi di flusso", author: "Galli Paolo")]
     }
 
     /// Come nel registro vero: la materia degli eventi spesso è vuota e c'è solo il docente.
     static var agenda: [Event] {
-        [Event(date: day(0), time: "12:00", subject: "", author: "Ricci Claudio", notes: "Svolgere il test di verifica caricato su Classroom", homework: true, id: 1),
-         Event(date: day(0), time: "08:00", subject: "", author: "Garato Giulia", notes: "Pag. 127 es. 3", homework: true, id: 2),
-         Event(date: day(2), time: "", subject: "", author: "De Rito Mauro", notes: "Verifica di sistemi  : circuiti di condizionamento e algoritmi", homework: false, id: 3),
-         Event(date: day(3), time: "", subject: "", author: "Ricci Claudio", notes: "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", homework: false, id: 4)]
+        [Event(date: day(0), time: "12:00", subject: "", author: "Conti Marco", notes: "Svolgere il test di verifica caricato su Classroom", homework: true, id: 1),
+         Event(date: day(0), time: "08:00", subject: "", author: "Ferri Anna", notes: "Pag. 127 es. 3", homework: true, id: 2),
+         Event(date: day(2), time: "", subject: "", author: "Galli Paolo", notes: "Verifica di sistemi  : circuiti di condizionamento e algoritmi", homework: false, id: 3),
+         Event(date: day(3), time: "", subject: "", author: "Conti Marco", notes: "INTERROGAZIONE ELETTROTECNICA: Rossi, Bianchi, Verdi", homework: false, id: 4)]
     }
 
     /// L'anno intero: le verifiche dell'agenda più due già fatte e una più lontana.
     static var yearAgenda: [Event] {
         agenda + [
-            Event(date: day(-6), time: "", subject: "", author: "Panzeri Maddalena", notes: "Verifica scritta: analisi del testo poetico", homework: false, id: 5),
-            Event(date: day(-15), time: "", subject: "", author: "Garato Giulia", notes: "Interrogazione di inglese: Rossi, Neri, Conti", homework: false, id: 6),
-            Event(date: day(12), time: "", subject: "", author: "Ricci Claudio", notes: "Verifica di elettrotecnica su campo magnetico e induzione", homework: false, id: 7)
+            Event(date: day(-6), time: "", subject: "", author: "Moretti Laura", notes: "Verifica scritta: analisi del testo poetico", homework: false, id: 5),
+            Event(date: day(-15), time: "", subject: "", author: "Ferri Anna", notes: "Interrogazione di inglese: Rossi, Neri, Greco", homework: false, id: 6),
+            Event(date: day(12), time: "", subject: "", author: "Conti Marco", notes: "Verifica di elettrotecnica su campo magnetico e induzione", homework: false, id: 7)
         ]
     }
 

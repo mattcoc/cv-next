@@ -196,6 +196,25 @@ final class Api {
         return (response as? HTTPURLResponse)?.statusCode == 200 && !cookies.isEmpty
     }
 
+    /// Le API del registro web nuovo (rest/w1) con i cookie della sessione web, salvate come le altre per l'uso offline.
+    func webGet(_ path: String, cacheAs: String? = nil) async throws -> JSON {
+        let file = cacheFile("WEB", cacheAs ?? path)
+        if Api.cacheOnly {
+            guard let file, let d = try? Data(contentsOf: file), let o = (try? JSONSerialization.jsonObject(with: d)) as? JSON else {
+                throw ApiError("Nessun dato salvato")
+            }
+            return o
+        }
+        let text = try await webPage("\(Endpoints.web)/rest/w1/students/\(try await studentId())\(path)")
+        let data = Data(text.utf8)
+        guard let o = (try? JSONSerialization.jsonObject(with: data)) as? JSON else { throw ApiError("Risposta non valida dal registro web") }
+        if let file {
+            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: file)
+        }
+        return o
+    }
+
     func webPage(_ url: String) async throws -> String {
         try requireOnline()
         try await webSession()

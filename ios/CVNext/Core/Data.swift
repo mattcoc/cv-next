@@ -79,18 +79,29 @@ extension Api {
         return try await agenda(from: year.start, to: year.end, cacheAs: "/agenda/year")
     }
 
+    /// L'agenda dell'app ufficiale (rest/v1) non riporta alcuni "Compiti assegnati" che il registro web mostra
+    /// (es. una verifica di laboratorio): si aggiungono quelli dell'agenda del registro web che mancano.
     func agenda(from: Date, to: Date, cacheAs: String? = nil) async throws -> [Event] {
-        let path = "/agenda/all/\(Day.basic(from))/\(Day.basic(to))"
+        let range = "\(Day.basic(from))/\(Day.basic(to))"
+        let path = "/agenda/all/\(range)"
         let o: JSON
         if let cacheAs { o = try await get(path, cacheAs: cacheAs) } else { o = try await get(path) }
-        return o.list("agenda").map {
-            let begin = $0.str("evtDatetimeBegin")
-            let time = $0.bool("isFullDay") ? "" : String(begin.dropFirst(11).prefix(5))
-            return Event(
-                date: String(begin.prefix(10)), time: time, subject: $0.str("subjectDesc").pretty, author: $0.str("authorName").pretty,
-                notes: $0.str("notes"), homework: $0.str("evtCode") == "AGHW", id: $0.int("evtId"), cls: $0.str("classDesc")
-            )
-        }.sorted { $0.date + $0.time < $1.date + $1.time }
+        let events = o.list("agenda").map { self.event($0) }
+        let known = Set(events.map(\.id))
+        let web = try? await webGet("/agendav2/all/\(range)", cacheAs: cacheAs.map { "\($0)/web" })
+        let extra = (web?.list("agenda") ?? []).map { self.event($0) }.filter { !known.contains($0.id) && !$0.date.isEmpty }
+        return (events + extra).sorted { $0.date + $0.time < $1.date + $1.time }
+    }
+
+    private func event(_ o: JSON) -> Event {
+        let begin = o.str("evtDatetimeBegin")
+        let time = o.bool("isFullDay") ? "" : String(begin.dropFirst(11).prefix(5))
+        let linked = o["homeworkId"].map { !($0 is NSNull) } ?? false
+        return Event(
+            date: String(begin.prefix(10)), time: time, subject: o.str("subjectDesc").pretty, author: o.str("authorName").pretty,
+            notes: o.str("notes"), homework: o.str("evtCode") == "AGHW" || linked,
+            id: o.int("evtId"), cls: o.str("classDesc")
+        )
     }
 
     func absences() async throws -> [Absence] {

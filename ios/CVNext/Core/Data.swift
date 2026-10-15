@@ -79,18 +79,32 @@ extension Api {
         return try await agenda(from: year.start, to: year.end, cacheAs: "/agenda/year")
     }
 
-    /// L'agenda dell'app ufficiale (rest/v1) non riporta alcuni "Compiti assegnati" che il registro web mostra
-    /// (es. una verifica di laboratorio): si aggiungono quelli dell'agenda del registro web che mancano.
+    /// I compiti assegnati dalla sezione "Compiti" del registro (rest/w1 homeworks) non sono nell'agenda dell'app ufficiale
+    /// (rest/v1): si aggiungono quelli che scadono nel periodo, saltando quelli già presenti in agenda con lo stesso testo.
     func agenda(from: Date, to: Date, cacheAs: String? = nil) async throws -> [Event] {
-        let range = "\(Day.basic(from))/\(Day.basic(to))"
-        let path = "/agenda/all/\(range)"
+        let path = "/agenda/all/\(Day.basic(from))/\(Day.basic(to))"
         let o: JSON
         if let cacheAs { o = try await get(path, cacheAs: cacheAs) } else { o = try await get(path) }
         let events = o.list("agenda").map { self.event($0) }
-        let known = Set(events.map(\.id))
-        let web = try? await webGet("/agendav2/all/\(range)", cacheAs: cacheAs.map { "\($0)/web" })
-        let extra = (web?.list("agenda") ?? []).map { self.event($0) }.filter { !known.contains($0.id) && !$0.date.isEmpty }
-        return (events + extra).sorted { $0.date + $0.time < $1.date + $1.time }
+        let known = Set(events.map { $0.date + Api.key($0.notes) })
+        let start = Day.iso(from), end = Day.iso(to)
+        let web = try? await webGet("/homeworks/index")
+        let homework = (web?.list("items") ?? []).map { self.homework($0) }
+            .filter { $0.date.count == 10 && $0.date >= start && $0.date <= end && !known.contains($0.date + Api.key($0.notes)) }
+        return (events + homework).sorted { $0.date + $0.time < $1.date + $1.time }
+    }
+
+    /// Un compito della sezione "Compiti" del registro, con la scadenza come data dell'evento.
+    private func homework(_ o: JSON) -> Event {
+        Event(
+            date: String(o.str("expiryDate").prefix(10)), time: String(o.str("expiryTime").prefix(5)),
+            subject: o.str("subjectDesc").pretty, author: o.str("teacherName").pretty,
+            notes: o.str("homeworkDesc"), homework: true, id: o.int("evtId"), cls: ""
+        )
+    }
+
+    private static func key(_ s: String) -> String {
+        String(Rx("[^\\p{L}\\p{N}]+").replace(s.plain, " ").trimmingCharacters(in: .whitespaces).prefix(40))
     }
 
     private func event(_ o: JSON) -> Event {

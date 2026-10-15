@@ -1,0 +1,2 @@
+Correzioni
+• Compiti: ora compaiono anche quelli che i docenti assegnano dalla sezione "Compiti" del registro e che prima l'app non vedeva, nella Giornata, nell'elenco dei compiti e, se sono verifiche o interrogazioni, tra le prossime verifiche

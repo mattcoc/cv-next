@@ -9,6 +9,10 @@ import android.content.ActivityNotFoundException
 import android.provider.CalendarContract
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.rounded.DoneAll
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.EditCalendar
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextDecoration
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Quiz
@@ -810,7 +815,28 @@ fun AbsencesScreen(list: List<Absence>) {
 }
 
 @Composable
-fun NoticesScreen(list: List<Notice>, onOpen: (Notice) -> Unit) {
+fun NoticesScreen(list: List<Notice>, onOpen: (Notice) -> Unit, onReadAll: suspend (List<Notice>, (Int) -> Unit) -> Int) {
+    val unread = list.filter { !it.read }
+    var confirm by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf<Int?>(null) }
+    var total by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    if (confirm || done != null) ReadAllDialog(total.takeIf { done != null } ?: unread.size, done, { confirm = false }) {
+        val todo = unread
+        total = todo.size
+        done = 0
+        confirm = false
+        scope.launch {
+            val failed = try { onReadAll(todo) { done = it } } finally { done = null }
+            Toast.makeText(
+                context,
+                if (failed == 0) (if (todo.size == 1) "Circolare segnata come letta" else "${todo.size} circolari segnate come lette")
+                else "$failed circolari non sono state segnate: riprova",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
     val categories = remember(list) { listOf("Tutte") + list.map { it.category }.filter(String::isNotBlank).distinct() }
     var filter by rememberSaveable { mutableStateOf("Tutte") }
     var query by rememberSaveable { mutableStateOf("") }
@@ -832,6 +858,13 @@ fun NoticesScreen(list: List<Notice>, onOpen: (Notice) -> Unit) {
             )
         }
         if (categories.size > 2) item { ChipRow(categories, filter, { it }, Modifier.appear(0)) { filter = it } }
+        if (unread.size > 1) item {
+            FilledTonalButton({ confirm = true }, Modifier.fillMaxWidth().appear(0)) {
+                Icon(Icons.Rounded.DoneAll, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Segna tutte come lette (${unread.size})", fontWeight = FontWeight.SemiBold)
+            }
+        }
         if (shown.isEmpty()) item { Empty(if (words.isEmpty()) "Nessuna comunicazione" else "Nessuna circolare trovata") }
         animItems(shown, "n-$filter-${words.isEmpty()}", 1) {
             Item(
@@ -847,6 +880,27 @@ fun NoticesScreen(list: List<Notice>, onOpen: (Notice) -> Unit) {
             )
         }
     }
+}
+
+/** Chiede conferma prima di segnare come lette tutte le circolari; [done] non nullo mostra l'avanzamento. */
+@Composable
+fun ReadAllDialog(count: Int, done: Int?, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { if (done == null) onDismiss() },
+        icon = { Icon(Icons.Rounded.DoneAll, null) },
+        title = { Text(if (done == null) "Segnare $count circolari come lette?" else "Segno come lette…") },
+        text = {
+            if (done == null) Text(
+                "Su Classeviva risulteranno lette, come se le avessi aperte una per una: per la scuola può valere come presa visione. " +
+                    "Non si può annullare."
+            ) else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LinearProgressIndicator({ if (count == 0) 1f else done / count.toFloat() }, Modifier.fillMaxWidth())
+                Text("$done di $count", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { if (done == null) TextButton(onConfirm) { Text("Segna come lette") } },
+        dismissButton = { if (done == null) TextButton(onDismiss) { Text("Annulla") } }
+    )
 }
 
 @Composable

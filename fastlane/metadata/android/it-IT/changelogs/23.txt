@@ -1,0 +1,12 @@
+Novità
+• Bacheca: nuovo pulsante "Segna tutte come lette". Prima di farlo l'app chiede conferma, perché su Classeviva le circolari risultano lette come se le avessi aperte una per una (per la scuola può valere come presa visione) e non si può annullare
+
+Notifiche più chiare
+• Circolari: il titolo è quello della circolare, sotto trovi la categoria e quanti PDF ha
+• Voti: nel titolo materia e voto (es. "Matematica: 8"), sotto il tipo di prova, la data e se non fa media
+• Agenda: "Compito per domani · Storia", "Verifica per giovedì 16 ottobre · Fisica" con la descrizione sotto
+• Il tuo nome: dice se sei tra gli interrogati o in una verifica, per quando e in che materia
+• Materiale dei docenti, note e pagamenti: dicono chi ha caricato il file, il tipo di nota e quanto c'è da pagare
+• Quando ne arrivano tante insieme vengono raggruppate in un riepilogo ("3 nuovi voti") e il telefono suona una volta sola
+• Il tocco apre la schermata giusta: la circolare, i voti, i compiti, le verifiche, il materiale dei docenti, le note o PagOnline
+• Le notifiche delle circolari spariscono quando le leggi nell'app

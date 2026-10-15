@@ -131,6 +131,7 @@ import androidx.core.view.WindowCompat
 import com.materialkolor.rememberDynamicColorScheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
@@ -525,6 +526,11 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
             // Scorciatoie dell'icona dell'app.
             t == "Tests" -> { stack.clear(); stack.add(Page.Tests) }
             t == "Compiti" -> { stack.clear(); agendaFilter = "Compiti"; section = Section.Agenda }
+            // Dalle notifiche: materiale dei docenti, note e pagamenti si aprono direttamente.
+            t == "Didactics" -> { stack.clear(); section = Section.Funzioni; stack.add(Page.Didactics) }
+            t == "Notes" -> { stack.clear(); section = Section.Funzioni; stack.add(Page.Notes) }
+            t == "Payments" -> { stack.clear(); stack.add(Page.Payments) }
+            t == "Agenda" -> { stack.clear(); agendaFilter = "Tutto"; section = Section.Agenda }
             else -> Section.entries.firstOrNull { it.name == t }?.let { stack.clear(); section = it }
         }
         target.value = null
@@ -590,7 +596,22 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                             Refreshable(grades) { GradesScreen(grades.data!!, periods.data.orEmpty()) }
                         }
                         Section.Agenda -> Refreshable(agenda) { AgendaScreen(agenda.data!!, agendaFilter, lessons.data.orEmpty()) { agendaFilter = it } }
-                        Section.Bacheca -> Refreshable(notices) { NoticesScreen(notices.data!!) { stack.add(Page.NoticePage(it)) } }
+                        Section.Bacheca -> Refreshable(notices) {
+                            NoticesScreen(notices.data!!, { stack.add(Page.NoticePage(it)) }) { list, progress ->
+                                // Una alla volta, come se si aprissero: Classeviva non ha un "segna tutte".
+                                // Gira nello scope della Home, così non si interrompe se la Bacheca si ridisegna.
+                                scope.async {
+                                    var failed = 0
+                                    list.forEachIndexed { i, n ->
+                                        if (runCatching { api.readNotice(n) }.isFailure) failed++
+                                        progress(i + 1)
+                                    }
+                                    Notifier.dismiss(context, Alert.Notices, api.current, list.map { "${it.id}" })
+                                    scope.launch { notices.refresh() }
+                                    failed
+                                }.await()
+                            }
+                        }
                         Section.Funzioni -> FunctionsScreen({ stack.add(it) }, { agendaFilter = "Compiti"; section = Section.Agenda }) {
                             if (it == Section.Agenda) agendaFilter = "Tutto"
                             section = it
@@ -614,7 +635,10 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
         ) { p ->
             if (p != null) Backdrop(Modifier.fillMaxSize()) {
                 when (p) {
-                    is Page.NoticePage -> NoticeScreen(api, p.notice) { back(); scope.launch { notices.refresh() } }
+                    is Page.NoticePage -> {
+                        LaunchedEffect(p.notice.id) { Notifier.dismiss(context, Alert.Notices, api.current, listOf("${p.notice.id}")) }
+                        NoticeScreen(api, p.notice) { back(); scope.launch { notices.refresh() } }
+                    }
                     is Page.FilePage -> FileScreen(p.title, p.file, back)
                     is Page.Web -> WebScreen(api, p.title, p.url, back)
                     Page.Absences -> SubScreen("Assenze", back) { Refreshable(absences) { AbsencesScreen(absences.data!!) } }

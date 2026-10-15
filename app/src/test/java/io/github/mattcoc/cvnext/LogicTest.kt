@@ -151,4 +151,12 @@ class LogicTest {
         assertEquals("Interrogazione", Event("2026-10-13", "", "", "", "INTERROGAZIONE: Rossi", false).testKind)
         assertEquals("Verifica", Event("2026-10-13", "", "", "", "Verifica unit 9", false).testKind)
     }
+
+    @Test
+    fun notificationDay() {
+        val today = java.time.LocalDate.of(2026, 10, 15)
+        assertEquals("oggi", whenLabel("2026-10-15", today))
+        assertEquals("domani", whenLabel("2026-10-16", today))
+        assertEquals("sabato 17 ottobre", whenLabel("2026-10-17", today))
+    }
 }

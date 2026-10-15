@@ -54,13 +54,29 @@ enum AlertKind: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Dove porta il tocco sulla notifica (le circolari aprono direttamente la comunicazione).
+    /// Dove porta il tocco sul riepilogo, quando le novità sono troppe per mostrarle tutte.
     var target: String {
         switch self {
         case .notices: "notices"
         case .grades: "grades"
-        case .homework, .mentions: "homework"
-        case .didactics, .notes, .payments: "today"
+        case .homework: "agenda"
+        case .didactics: "didactics"
+        case .notes: "notes"
+        case .payments: "payments"
+        case .mentions: "today"
+        }
+    }
+
+    /// Titolo del riepilogo: "3 nuovi voti".
+    func plural(_ n: Int) -> String {
+        switch self {
+        case .notices: "\(n) nuove circolari"
+        case .grades: "\(n) nuovi voti"
+        case .homework: "\(n) novità in agenda"
+        case .didactics: "\(n) nuovi file dei docenti"
+        case .notes: "\(n) nuove note"
+        case .payments: "\(n) pagamenti da fare"
+        case .mentions: "Sei nominato \(n) volte in agenda"
         }
     }
 
@@ -102,71 +118,120 @@ enum Checker {
         let defaults = UserDefaults.standard
         for account in accounts {
             let api = Api(fixed: account.key)
-            let who = accounts.count > 1 ? "\(account.name.firstWord.pretty) · " : ""
+            let who = accounts.count > 1 ? account.name.firstWord.pretty : nil
             // In background iOS concede pochi secondi: le richieste partono tutte insieme invece che una alla volta.
-            let results = await withTaskGroup(of: (AlertKind, [(String, String)]?).self) { group in
+            let results = await withTaskGroup(of: (AlertKind, [News]?).self) { group in
                 for alert in AlertKind.allCases where enabled.contains(alert) {
                     // Sul main actor: lo stato dell'Api resta su un solo thread, ma le attese di rete si sovrappongono.
                     group.addTask { @MainActor in (alert, try? await fetch(api, alert, account)) }
                 }
-                var all: [AlertKind: [(String, String)]] = [:]
+                var all: [AlertKind: [News]] = [:]
                 for await (alert, items) in group { if let items { all[alert] = items } }
                 return all
             }
+            var sound = true
             for alert in AlertKind.allCases {
                 guard let items = results[alert] else { continue }
                 let key = "seen-\(alert.rawValue)-\(account.key)"
                 if let seen = defaults.stringArray(forKey: key).map(Set.init) {
-                    for item in items.filter({ !seen.contains($0.0) }).prefix(5) {
-                        // Una circolare si apre direttamente toccando la notifica.
-                        let target = alert == .notices ? "notice:\(item.0)" : alert.target
-                        await post(alert, id: "\(alert.rawValue)-\(account.key)-\(item.0)", text: who + item.1,
-                                   info: ["target": target, "account": account.key])
+                    let new = items.filter { !seen.contains($0.id) }
+                    // Al massimo 5: se sono di più l'ultima è un riepilogo che apre l'elenco.
+                    let shown = new.count > 5 ? Array(new.prefix(4)) : new
+                    for n in shown {
+                        await post(alert, account: account.key, who: who, id: n.id, title: n.title, body: n.body, target: n.target, sound: sound)
+                        sound = false
+                    }
+                    if new.count > 5 {
+                        await post(alert, account: account.key, who: who, id: "more", title: alert.plural(new.count),
+                                   body: "E altre \(new.count - 4): tocca per vederle tutte", target: alert.target, sound: false)
                     }
                 }
                 // Tiene solo gli id ancora presenti, così l'elenco non cresce all'infinito.
-                defaults.set(items.map(\.0), forKey: key)
+                defaults.set(items.map(\.id), forKey: key)
             }
         }
         defaults.set(Date().timeIntervalSince1970, forKey: "lastCheck")
     }
 
-    private static func post(_ alert: AlertKind, id: String, text: String, info: [String: String] = [:]) async {
+    static func notificationId(_ alert: AlertKind, account: String, id: String) -> String { "\(alert.rawValue)-\(account)-\(id)" }
+
+    /// Una notifica per novità, raggruppate da iOS per tipo e account; suona solo la prima di ogni controllo.
+    private static func post(_ alert: AlertKind, account: String, who: String?, id: String, title: String, body: String, target: String, sound: Bool) async {
         let content = UNMutableNotificationContent()
-        content.userInfo = info
-        content.title = alert.single
-        content.body = text
-        content.sound = .default
-        content.threadIdentifier = alert.rawValue
-        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+        content.userInfo = ["target": target, "account": account]
+        content.title = title
+        content.subtitle = who ?? ""
+        content.body = body
+        content.sound = sound ? .default : nil
+        content.threadIdentifier = "\(alert.rawValue)-\(account)"
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: notificationId(alert, account: account, id: id), content: content, trigger: nil))
     }
 
-    private static func fetch(_ api: Api, _ alert: AlertKind, _ account: Account) async throws -> [(String, String)] {
+    /// Toglie dal Centro notifiche le circolari lette nell'app.
+    static func dismissNotices(account: String?, ids: [Int]) {
+        guard let account else { return }
+        UNUserNotificationCenter.current().removeDeliveredNotifications(
+            withIdentifiers: ids.map { notificationId(.notices, account: account, id: "\($0)") } + [notificationId(.notices, account: account, id: "more")])
+    }
+
+    private static func fetch(_ api: Api, _ alert: AlertKind, _ account: Account) async throws -> [News] {
         switch alert {
         case .notices:
-            return try await api.notices().filter { !$0.read }.map { ("\($0.id)", $0.title) }
+            return try await api.notices().filter { !$0.read }.map { n in
+                let c = n.attachments.count
+                let pdf = c == 0 ? "" : c == 1 ? "1 PDF allegato" : "\(c) PDF allegati"
+                return News(id: "\(n.id)", title: n.title, body: [n.category.ifBlank ?? "Nuova circolare", pdf].filter { !$0.isEmpty }.joined(separator: " · "), target: "notice:\(n.id)")
+            }
         case .grades:
             return try await api.grades().map { g in
                 let id = g.id != 0 ? "\(g.id)" : "\(g.subject)_\(g.date)_\(g.value)"
-                return (id, "\(g.subject): \(g.value)" + (g.type.trimmed.isEmpty ? "" : " (\(g.type.lowercased()))"))
+                let details = [g.type.trimmed.capFirst, shortDate(g.date), g.counts ? "" : "non fa media", g.notes.trimmed]
+                return News(id: id, title: "\(g.subject): \(g.value)", body: details.filter { !$0.isEmpty }.joined(separator: " · "), target: "grades")
             }
         case .homework:
-            return try await api.agenda().map { ("\($0.id)", "\(shortDate($0.date)) · \($0.subject.ifBlank ?? $0.author): \($0.notes)") }
+            return try await api.agenda().map { e in
+                let subject = e.subject.ifBlank ?? e.author
+                return News(id: "\(e.id)", title: "\(e.kind) per \(whenLabel(e.date))" + (subject.trimmed.isEmpty ? "" : " · \(subject)"),
+                            body: e.notes.tidy.ifBlank ?? "Nessuna descrizione", target: e.isTest ? "tests" : e.homework ? "homework" : "agenda")
+            }
         case .didactics:
-            return try await api.didactics().flatMap { t in t.folders.flatMap { f in f.contents.map { ("\($0.id)", "\(t.name): \($0.name)") } } }
+            return try await api.didactics().flatMap { t in t.folders.flatMap { f in f.contents.map {
+                News(id: "\($0.id)", title: "Nuovo file da \(t.name)", body: [$0.name, f.name].filter { !$0.trimmed.isEmpty }.uniqued.joined(separator: " · "), target: "didactics")
+            } } }
         case .notes:
-            return try await api.notes().map { ("\($0.id)", "\($0.type) · \($0.author)") }
+            return try await api.notes().map { News(id: "\($0.id)", title: "\($0.type) · \($0.author)", body: $0.text.ifBlank ?? longDate($0.date), target: "notes") }
         case .payments:
-            return try await api.payments().map { ($0.id, "\($0.title) · € \($0.amount) entro il \(shortDate($0.due))") }
+            return try await api.payments().map { News(id: $0.id, title: "Da pagare: € \($0.amount)", body: "\($0.title) · entro il \(shortDate($0.due))", target: "payments") }
         case .mentions:
             let names = Mentions.names(account)
             let today = Day.iso(Date())
-            return try await api.agenda().filter { $0.date >= today && Mentions.matches("\($0.notes) \($0.subject)", names) }.map {
-                let what = $0.isTest ? "Verifica o interrogazione" : $0.homework ? "Compito" : "Evento"
-                return ("m\($0.id)", "\(what) · \(longDate($0.date)) · \($0.subject.ifBlank ?? $0.author): \($0.notes)")
+            return try await api.agenda().filter { $0.date >= today && Mentions.matches("\($0.notes) \($0.subject)", names) }.map { e in
+                let subject = e.subject.ifBlank ?? e.author
+                return News(id: "m\(e.id)", title: "Sei nominato: \(e.kind) per \(whenLabel(e.date))" + (subject.trimmed.isEmpty ? "" : " · \(subject)"),
+                            body: e.notes.tidy, target: e.isTest ? "tests" : "day")
             }
         }
     }
+}
+
+/// Una novità da notificare: [target] è la pagina che si apre toccandola.
+struct News {
+    var id: String, title: String, body: String, target: String
+}
+
+/// "oggi", "domani" o la data per esteso, da mettere dopo "per".
+func whenLabel(_ s: String, today: Date = Date()) -> String {
+    guard let d = Day.parse(s) else { return s }
+    let start = Day.cal.startOfDay(for: today)
+    switch Day.between(start, d) {
+    case 0: return "oggi"
+    case 1: return "domani"
+    default: return Day.longFmt.string(from: d)
+    }
+}
+
+private extension Array where Element == String {
+    var uniqued: [String] { var seen = Set<String>(); return filter { seen.insert($0).inserted } }
 }
 
 /// Ogni sera, all'ora scelta, avvisa dei compiti, delle verifiche e dei promemoria del giorno di scuola successivo.

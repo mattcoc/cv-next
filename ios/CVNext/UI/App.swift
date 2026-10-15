@@ -244,6 +244,12 @@ extension HomeView {
         case "notices": model.tab = .notices
         case "homework": model.tab = .today; model.todayPath = NavigationPath([Page.agenda("Compiti")])
         case "tests": model.tab = .today; model.todayPath = NavigationPath([Page.tests])
+        // Dalle notifiche: agenda, materiale dei docenti, note e PagOnline.
+        case "agenda": model.tab = .today; model.todayPath = NavigationPath([Page.agenda("Tutto")])
+        case "didactics": model.tab = .today; model.todayPath = NavigationPath([Page.didactics])
+        case "notes": model.tab = .today; model.todayPath = NavigationPath([Page.notes])
+        case "payments": model.tab = .today; model.todayPath = NavigationPath([Page.web("PagOnline", WebLinks.payments)])
+        case "today": model.tab = .today
         default: break
         }
     }

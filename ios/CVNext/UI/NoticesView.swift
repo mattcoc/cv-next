@@ -5,12 +5,59 @@ struct NoticesView: View {
     @Environment(Model.self) private var model
     @State private var filter = "Tutte"
     @State private var query = ""
+    @State private var confirm = false
+    /// Circolari segnate finora e quante sono in tutto, mentre "Segna tutte come lette" lavora.
+    @State private var progress: (done: Int, total: Int)?
+    @State private var result: String?
 
     var body: some View {
         Screen(refresh: { await model.refresh([model.notices]) }) {
             Loaded(model.notices) { content }
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Cerca nelle circolari")
+        .alert("Segnare \(unread.count) circolari come lette?", isPresented: $confirm) {
+            Button("Segna come lette") { readAll() }
+            Button("Annulla", role: .cancel) {}
+        } message: {
+            Text("Su Classeviva risulteranno lette, come se le avessi aperte una per una: per la scuola può valere come presa visione. Non si può annullare.")
+        }
+        .alert(result ?? "", isPresented: Binding(get: { result != nil }, set: { if !$0 { result = nil } })) {
+            Button("OK", role: .cancel) {}
+        }
+        .overlay {
+            if let progress {
+                VStack(spacing: 12) {
+                    Text("Segno come lette…").font(.headline)
+                    ProgressView(value: Double(progress.done), total: Double(max(progress.total, 1)))
+                    Text("\(progress.done) di \(progress.total)").font(.subheadline).foregroundStyle(.subtle)
+                }
+                .frame(width: 240)
+                .padding(24)
+                .glassEffect(.regular, in: .rect(cornerRadius: 24))
+            }
+        }
+    }
+
+    private var unread: [Notice] { (model.notices.data ?? []).filter { !$0.read } }
+
+    /// Una alla volta, come se si aprissero: Classeviva non ha un "segna tutte".
+    private func readAll() {
+        let todo = unread
+        progress = (0, todo.count)
+        Task {
+            var failed = 0
+            for (i, n) in todo.enumerated() {
+                if model.debugName == nil {
+                    do { _ = try await model.api.readNotice(n) } catch { failed += 1 }
+                }
+                progress = (i + 1, todo.count)
+            }
+            Checker.dismissNotices(account: model.api.current, ids: todo.map(\.id))
+            await model.notices.refresh()
+            progress = nil
+            result = failed == 0 ? (todo.count == 1 ? "Circolare segnata come letta" : "\(todo.count) circolari segnate come lette")
+                : "\(failed) circolari non sono state segnate: riprova"
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -23,6 +70,14 @@ struct NoticesView: View {
             }
         }
         if categories.count > 2 { ChipRow(options: categories, selected: $filter) { $0 } }
+        if unread.count > 1 {
+            Button { confirm = true } label: {
+                Label("Segna tutte come lette (\(unread.count))", systemImage: "checkmark.circle")
+                    .font(.body.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 6)
+            }
+            .buttonStyle(.glass)
+            .disabled(progress != nil)
+        }
         if shown.isEmpty { EmptyCard(text: words.isEmpty ? "Nessuna comunicazione" : "Nessuna circolare trovata") }
         ForEach(Array(shown.enumerated()), id: \.offset) { _, n in
             NavigationLink(value: Page.notice(n)) { NoticeRow(notice: n) }.buttonStyle(.plain)
@@ -108,7 +163,10 @@ struct NoticeView: View {
         .alert("Impossibile aprire l'allegato", isPresented: Binding(get: { failed != nil }, set: { if !$0 { failed = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(failed ?? "") }
-        .task { await load() }
+        .task {
+            Checker.dismissNotices(account: model.api.current, ids: [notice.id])
+            await load()
+        }
         .onDisappear { Task { await model.notices.refresh() } }
     }
 

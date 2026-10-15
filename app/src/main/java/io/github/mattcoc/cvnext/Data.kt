@@ -49,18 +49,30 @@ fun schoolYear(today: LocalDate = LocalDate.now()): Pair<LocalDate, LocalDate> {
     return start to start.plusYears(1).minusDays(1)
 }
 
+private fun JSONObject.event(): Event {
+    val begin = str("evtDatetimeBegin")
+    return Event(
+        begin.take(10), if (optBoolean("isFullDay")) "" else begin.drop(11).take(5),
+        str("subjectDesc").pretty(), str("authorName").pretty(), str("notes"),
+        str("evtCode") == "AGHW" || !isNull("homeworkId"),
+        optLong("evtId"), str("classDesc")
+    )
+}
+
+/**
+ * L'agenda dell'app ufficiale (rest/v1) non riporta alcuni "Compiti assegnati" che il registro web mostra
+ * (es. una verifica di laboratorio): si aggiungono quelli dell'agenda del registro web che mancano.
+ */
 suspend fun Api.agenda(
     from: LocalDate = LocalDate.now().minusDays(30), to: LocalDate = LocalDate.now().plusDays(30)
 ): List<Event> {
     val f = DateTimeFormatter.BASIC_ISO_DATE
-    return get("/agenda/all/${from.format(f)}/${to.format(f)}").list("agenda").map {
-        val begin = it.str("evtDatetimeBegin")
-        Event(
-            begin.take(10), if (it.optBoolean("isFullDay")) "" else begin.drop(11).take(5),
-            it.str("subjectDesc").pretty(), it.str("authorName").pretty(), it.str("notes"), it.str("evtCode") == "AGHW",
-            it.optLong("evtId"), it.str("classDesc")
-        )
-    }.sortedBy { it.date + it.time }
+    val range = "${from.format(f)}/${to.format(f)}"
+    val events = get("/agenda/all/$range").list("agenda").map { it.event() }
+    val known = events.map { it.id }.toSet()
+    val extra = runCatching { webGet("/agendav2/all/$range").list("agenda").map { it.event() } }.getOrDefault(emptyList())
+        .filter { it.id !in known && it.date.isNotBlank() }
+    return (events + extra).sortedBy { it.date + it.time }
 }
 
 suspend fun Api.absences() = get("/absences/details").list("events").map {

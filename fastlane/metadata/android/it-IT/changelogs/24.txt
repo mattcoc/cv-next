@@ -1,0 +1,2 @@
+Correzioni
+• Agenda: ora compaiono anche i "Compiti assegnati" che Classeviva mostra sul sito ma non mandava all'app (per esempio una verifica di laboratorio), sia nella Giornata sia tra le prossime verifiche

@@ -156,6 +156,21 @@ class Api(context: Context, private val fixed: String? = null) {
     }
 
     suspend fun get(path: String) = json("GET", path)
+
+    /** Le API del registro web nuovo (rest/w1) con i cookie della sessione web, salvate come le altre per l'uso offline. */
+    suspend fun webGet(path: String): JSONObject {
+        val file = cacheFile("WEB", path)
+        if (offline()) {
+            return withContext(Dispatchers.IO) {
+                file?.takeIf { it.exists() }?.let { runCatching { JSONObject(it.readText()) }.getOrNull() }
+            } ?: throw ApiException("Nessun dato salvato")
+        }
+        val res = runCatching { JSONObject(webPage("${Endpoints.WEB}/rest/w1/students/${studentId()}$path")) }.getOrNull()
+            ?: throw ApiException("Risposta non valida dal registro web")
+        withContext(Dispatchers.IO) { runCatching { file?.parentFile?.mkdirs(); file?.writeText(res.toString()) } }
+        return res
+    }
+
     suspend fun post(path: String) = json("POST", path)
     suspend fun bytes(path: String) = authed { raw("GET", student(path), null, token()) }
     suspend fun postBytes(path: String) = authed { raw("POST", student(path), null, token()) }

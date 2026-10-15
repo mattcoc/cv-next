@@ -48,10 +48,15 @@ jobs:
       - name: Note di versione
         run: |
           PREV=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          # Se c'è, si usa il changelog scritto per chi usa l'app (lo stesso di F-Droid) al posto dei messaggi dei commit.
+          CODE=$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | grep -oE '[0-9]+')
+          CHANGELOG="fastlane/metadata/android/it-IT/changelogs/$CODE.txt"
           {
             echo "## Novità"
             echo
-            if [ -n "$PREV" ]; then
+            if [ -f "$CHANGELOG" ]; then
+              sed -E '1{/^(Novità|Correzioni)$/d}; s/^• /- /' "$CHANGELOG"
+            elif [ -n "$PREV" ]; then
               git log "$PREV..HEAD" --no-merges --format='- %s' -- app
             else
               git log --no-merges --format='- %s' -- app

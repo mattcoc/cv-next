@@ -59,20 +59,27 @@ private fun JSONObject.event(): Event {
     )
 }
 
+/** Un compito della sezione "Compiti" del registro (homeworks), con la scadenza come data dell'evento. */
+private fun JSONObject.homework() = Event(
+    str("expiryDate").take(10), str("expiryTime").take(5), str("subjectDesc").pretty(), str("teacherName").pretty(),
+    str("homeworkDesc"), true, optLong("evtId"), ""
+)
+
+private fun String.key() = plain().replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim().take(40)
+
 /**
- * L'agenda dell'app ufficiale (rest/v1) non riporta alcuni "Compiti assegnati" che il registro web mostra
- * (es. una verifica di laboratorio): si aggiungono quelli dell'agenda del registro web che mancano.
+ * I compiti assegnati dalla sezione "Compiti" del registro (rest/w1 homeworks) non sono nell'agenda dell'app ufficiale
+ * (rest/v1): si aggiungono quelli che scadono nel periodo, saltando quelli già presenti in agenda con lo stesso testo.
  */
 suspend fun Api.agenda(
     from: LocalDate = LocalDate.now().minusDays(30), to: LocalDate = LocalDate.now().plusDays(30)
 ): List<Event> {
     val f = DateTimeFormatter.BASIC_ISO_DATE
-    val range = "${from.format(f)}/${to.format(f)}"
-    val events = get("/agenda/all/$range").list("agenda").map { it.event() }
-    val known = events.map { it.id }.toSet()
-    val extra = runCatching { webGet("/agendav2/all/$range").list("agenda").map { it.event() } }.getOrDefault(emptyList())
-        .filter { it.id !in known && it.date.isNotBlank() }
-    return (events + extra).sortedBy { it.date + it.time }
+    val events = get("/agenda/all/${from.format(f)}/${to.format(f)}").list("agenda").map { it.event() }
+    val known = events.map { it.date + it.notes.key() }.toSet()
+    val homework = runCatching { webGet("/homeworks/index").list("items").map { it.homework() } }.getOrDefault(emptyList())
+        .filter { it.date.length == 10 && it.date >= from.toString() && it.date <= to.toString() && it.date + it.notes.key() !in known }
+    return (events + homework).sortedBy { it.date + it.time }
 }
 
 suspend fun Api.absences() = get("/absences/details").list("events").map {

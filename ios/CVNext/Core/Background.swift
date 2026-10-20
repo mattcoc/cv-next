@@ -199,7 +199,7 @@ enum Checker {
                 News(id: "\($0.id)", title: "Nuovo file da \(t.name)", body: [$0.name, f.name].filter { !$0.trimmed.isEmpty }.uniqued.joined(separator: " · "), target: "didactics")
             } } }
         case .notes:
-            return try await api.notes().map { News(id: "\($0.id)", title: "\($0.type) · \($0.author)", body: $0.text.ifBlank ?? longDate($0.date), target: "notes") }
+            return try await api.notes().map { News(id: "\($0.id)", title: "\($0.type) · \($0.author)", body: $0.hidden ? longDate($0.date) : $0.text, target: "notes") }
         case .payments:
             return try await api.payments().map { News(id: $0.id, title: "Da pagare: € \($0.amount)", body: "\($0.title) · entro il \(shortDate($0.due))", target: "payments") }
         case .mentions:

@@ -123,6 +123,10 @@ struct AbsencesView: View {
 
 struct NotesView: View {
     @Environment(Model.self) private var model
+    // Testi scaricati al tocco, finché la lista non si ricarica.
+    @State private var texts: [Int: String] = [:]
+    @State private var loading: Int?
+    @State private var failed: String?
 
     var body: some View {
         Screen(refresh: { await model.refresh([model.notes]) }) {
@@ -131,13 +135,35 @@ struct NotesView: View {
                 if list.isEmpty { EmptyCard(text: "Nessuna nota. Ottimo così!", icon: "hand.thumbsup") }
                 ForEach(Array(list.enumerated()), id: \.offset) { _, n in
                     let color: Color = n.type == "Nota disciplinare" || n.type == "Sanzione disciplinare" ? .red : n.type == "Richiamo" ? .orange : .blue
-                    ItemRow(headline: n.type, overline: [longDate(n.date), n.author].filter { !$0.trimmed.isEmpty }.joined(separator: " · "),
-                            supporting: n.text, bold: !n.read, leading: AnyView(IconBadge(icon: "exclamationmark.bubble.fill", color: color)),
-                            trailing: n.read ? nil : AnyView(NewBadge()))
+                    let loaded = texts[n.id]
+                    let text = loaded ?? (n.hidden ? (loading == n.id ? "Caricamento…" : "Tocca per leggere la nota") : n.text)
+                    let unread = !n.read && loaded == nil
+                    let row = ItemRow(headline: n.type, overline: [longDate(n.date), n.author].filter { !$0.trimmed.isEmpty }.joined(separator: " · "),
+                            supporting: text, bold: unread, interactive: (n.hidden || !n.read) && loaded == nil,
+                            leading: AnyView(IconBadge(icon: "exclamationmark.bubble.fill", color: color)),
+                            trailing: unread ? AnyView(NewBadge()) : nil)
+                    if (n.hidden || !n.read) && loaded == nil {
+                        Button { Task { await open(n) } } label: { row }.buttonStyle(.plain).disabled(loading != nil)
+                    } else {
+                        row
+                    }
                 }
             }
         }
         .task { await model.notes.ensure() }
+        .alert("Impossibile aprire la nota", isPresented: Binding(get: { failed != nil }, set: { if !$0 { failed = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(failed ?? "") }
+    }
+
+    private func open(_ n: NoteItem) async {
+        loading = n.id
+        defer { loading = nil }
+        do {
+            let t = try await model.api.readNote(n)
+            texts[n.id] = t.ifBlank ?? (n.hidden ? "" : n.text)
+            await model.refresh([model.notes])
+        } catch { failed = error.userText }
     }
 }
 

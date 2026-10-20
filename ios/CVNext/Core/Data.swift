@@ -39,7 +39,11 @@ struct Period: Hashable {
 
 struct School { var name: String, city: String }
 struct Payment: Hashable { var id: String, title: String, amount: String, due: String }
-struct NoteItem: Hashable { var type: String, date: String, author: String, text: String; var read: Bool; var id: Int = 0 }
+struct NoteItem: Hashable {
+    var type: String, date: String, author: String, text: String; var read: Bool; var id: Int = 0; var code = ""
+    /// Classeviva manda il testo delle note non ancora lette come "...": si ottiene solo segnandole come lette.
+    var hidden: Bool { text.trimmingCharacters(in: CharacterSet(charactersIn: ".…").union(.whitespacesAndNewlines)).isEmpty }
+}
 
 struct DidContent: Hashable { var id: Int, name: String, type: String, date: String }
 struct DidFolder: Hashable { var name: String, date: String, contents: [DidContent] }
@@ -220,8 +224,13 @@ extension Api {
         let o = try await get("/notes/all")
         let types = [("NTCL", "Nota disciplinare"), ("NTWN", "Richiamo"), ("NTTE", "Annotazione"), ("NTST", "Sanzione disciplinare")]
         return types.flatMap { key, label in
-            o.list(key).map { NoteItem(type: label, date: $0.str("evtDate"), author: $0.str("authorName").pretty, text: $0.str("evtText"), read: $0.bool("readStatus"), id: $0.int("evtId")) }
+            o.list(key).map { NoteItem(type: label, date: $0.str("evtDate"), author: $0.str("authorName").pretty, text: $0.str("evtText"), read: $0.bool("readStatus"), id: $0.int("evtId"), code: key) }
         }.sorted { $0.date > $1.date }
+    }
+
+    /// Apre la nota (e la segna come letta): solo così il registro manda il testo.
+    func readNote(_ n: NoteItem) async throws -> String {
+        try await post("/notes/\(n.code)/read/\(n.id)").obj("event")?.str("evtText").trimmed ?? ""
     }
 
     func didactics() async throws -> [DidTeacher] {

@@ -1,0 +1,2 @@
+Correzioni
+• Note: toccando una nota non ancora letta ora si vede il testo completo invece dei tre puntini, e la nota viene segnata come letta sul registro

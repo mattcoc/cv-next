@@ -76,6 +76,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -192,8 +193,13 @@ private fun FnCard(fn: Fn, modifier: Modifier) {
 }
 
 @Composable
-fun NotesScreen(list: List<NoteItem>) {
+fun NotesScreen(api: Api, list: List<NoteItem>, onRead: () -> Unit) {
     val c = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Testi scaricati al tocco, finché la lista non si ricarica.
+    val texts = remember { mutableStateMapOf<Long, String>() }
+    var loading by remember { mutableStateOf<Long?>(null) }
     Screen {
         if (list.isEmpty()) item { Empty("Nessuna nota. Ottimo così!") }
         animItems(list, "notes") {
@@ -202,9 +208,22 @@ fun NotesScreen(list: List<NoteItem>) {
                 "Richiamo" -> c.tertiaryContainer to c.onTertiaryContainer
                 else -> c.secondaryContainer to c.onSecondaryContainer
             }
-            Item(it.type, listOf(longDate(it.date), it.author).filter(String::isNotBlank).joinToString(" · "), it.text,
-                bold = !it.read, expandable = true, leading = { IconCircle(Icons.Rounded.Feedback, bg, fg) },
-                trailing = if (!it.read) { { NewBadge() } } else null)
+            val loaded = texts[it.id]
+            val text = loaded ?: if (it.hidden) (if (loading == it.id) "Caricamento…" else "Tocca per leggere la nota") else it.text
+            val open = (it.hidden || !it.read) && loaded == null
+            Item(it.type, listOf(longDate(it.date), it.author).filter(String::isNotBlank).joinToString(" · "), text,
+                bold = !it.read && loaded == null, expandable = true, leading = { IconCircle(Icons.Rounded.Feedback, bg, fg) },
+                trailing = if (!it.read && loaded == null) { { NewBadge() } } else null,
+                onClick = if (open && loading == null) { {
+                    val note = it
+                    loading = note.id
+                    scope.launch {
+                        runCatching { api.readNote(note) }
+                            .onSuccess { t -> texts[note.id] = t.ifBlank { note.text.takeUnless { note.hidden }.orEmpty() }; onRead() }
+                            .onFailure { e -> Toast.makeText(context, e.message ?: "Impossibile aprire la nota", Toast.LENGTH_SHORT).show() }
+                        loading = null
+                    }
+                } } else null)
         }
     }
 }

@@ -239,7 +239,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         Alert.Didactics -> api.didactics().flatMap { t -> t.folders.flatMap { f -> f.contents.map {
             News("${it.id}", "Nuovo file da ${t.name}", listOf(it.name, f.name).filter(String::isNotBlank).distinct().joinToString(" · "), "Didactics")
         } } }
-        Alert.Notes -> api.notes().map { News("${it.id}", "${it.type} · ${it.author}", it.text.ifBlank { longDate(it.date) }, "Notes") }
+        Alert.Notes -> api.notes().map { News("${it.id}", "${it.type} · ${it.author}", if (it.hidden) longDate(it.date) else it.text, "Notes") }
         Alert.Payments -> api.payments().map { News(it.id, "Da pagare: € ${it.amount}", "${it.title} · entro il ${shortDate(it.due)}", "Payments") }
         Alert.Mentions -> {
             val names = Mentions.names(applicationContext, account)

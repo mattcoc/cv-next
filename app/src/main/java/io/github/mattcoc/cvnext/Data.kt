@@ -301,15 +301,21 @@ fun neededGrade(values: List<Double>, target: Double): Needed {
     return if (two <= 10) Needed.Two(two) else Needed.Impossible
 }
 
-data class NoteItem(val type: String, val date: String, val author: String, val text: String, val read: Boolean, val id: Long = 0)
+data class NoteItem(val type: String, val date: String, val author: String, val text: String, val read: Boolean, val id: Long = 0, val code: String = "") {
+    /** Classeviva manda il testo delle note non ancora lette come "...": si ottiene solo segnandole come lette. */
+    val hidden get() = text.trim().trim('.', '…').isBlank()
+}
 
 suspend fun Api.notes(): List<NoteItem> {
     val o = get("/notes/all")
     val types = mapOf("NTCL" to "Nota disciplinare", "NTWN" to "Richiamo", "NTTE" to "Annotazione", "NTST" to "Sanzione disciplinare")
     return types.flatMap { (key, label) ->
-        o.list(key).map { NoteItem(label, it.str("evtDate"), it.str("authorName").pretty(), it.str("evtText"), it.optBoolean("readStatus"), it.optLong("evtId")) }
+        o.list(key).map { NoteItem(label, it.str("evtDate"), it.str("authorName").pretty(), it.str("evtText"), it.optBoolean("readStatus"), it.optLong("evtId"), key) }
     }.sortedByDescending { it.date }
 }
+
+suspend fun Api.readNote(n: NoteItem): String =
+    post("/notes/${n.code}/read/${n.id}").optJSONObject("event")?.str("evtText").orEmpty().trim()
 
 data class DidContent(val id: Long, val name: String, val type: String, val date: String)
 data class DidFolder(val name: String, val date: String, val contents: List<DidContent>)

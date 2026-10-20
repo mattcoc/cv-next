@@ -642,7 +642,7 @@ fun Home(api: Api, settings: Settings, target: MutableState<String?>, pendingAcc
                     is Page.FilePage -> FileScreen(p.title, p.file, back)
                     is Page.Web -> WebScreen(api, p.title, p.url, back)
                     Page.Absences -> SubScreen("Assenze", back) { Refreshable(absences) { AbsencesScreen(absences.data!!) } }
-                    Page.Notes -> SubScreen("Note", back) { Lazy(notes) { NotesScreen(notes.data!!) } }
+                    Page.Notes -> SubScreen("Note", back) { Lazy(notes) { NotesScreen(api, notes.data!!) { scope.launch { notes.refresh() } } } }
                     Page.Didactics -> SubScreen("File dei docenti", back) { Lazy(didactics) { DidacticsScreen(api, didactics.data!!) { stack.add(it) } } }
                     Page.Documents -> SubScreen("Scrutini", back) { Lazy(documents) { DocumentsScreen(api, documents.data!!) { stack.add(it) } } }
                     Page.Lessons -> SubScreen("Lezioni", back) { Refreshable(lessons) { LessonsScreen(lessons.data!!) } }
